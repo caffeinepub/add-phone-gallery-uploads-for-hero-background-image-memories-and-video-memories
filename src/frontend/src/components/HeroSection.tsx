@@ -9,16 +9,21 @@ interface HeroSectionProps {
 export default function HeroSection({ onOpenMediaManager }: HeroSectionProps) {
   const { heroBackgroundUrl } = useMediaStore();
 
-  // Use uploaded background if available, otherwise fallback to placeholder
-  const backgroundImage = heroBackgroundUrl ? `url(${heroBackgroundUrl})` : 'url(/hero-bg.jpg)';
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage }}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-rose-100"
+        style={heroBackgroundUrl ? { backgroundImage: `url(${heroBackgroundUrl})` } : undefined}
       >
+        {!heroBackgroundUrl && (
+          <div className="absolute inset-0 flex items-center justify-center text-rose-300">
+            <div className="text-center">
+              <Sparkles className="w-16 h-16 mx-auto mb-4" />
+              <p className="text-lg font-medium">No hero background uploaded</p>
+            </div>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-rose-900/40 via-pink-900/30 to-rose-900/50" />
       </div>
 

@@ -1,110 +1,125 @@
 {
   "kind": "build_request",
-  "title": "Fix missing media previews in preview/live modes, restore audio playback, and clarify Media button label",
+  "title": "Make Draft, Preview, and Published render identical uploaded media only (no placeholders/resets/lazy hiding)",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-42",
-      "text": "Ensure uploaded/published media is visible in both the app's preview experience and the live/production experience: Hero background, all Image Memory slots, all Video Memory slots, and the background song must render using the current MediaStore state and must correctly fall back to backend-published media when local IndexedDB media is absent.",
-      "target": "frontend",
+      "id": "REQ-53",
+      "text": "Unify media source-of-truth so that the same committed media set (hero background, 43 image slots, 6 video slots, and background song) is what renders in Draft, Preview, and Published modes (Draft = Preview = Published). After a successful Media Manager Submit, the app must render from the committed set and must not show any older placeholders or regenerated/static assets for those slots.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-4"
         ],
         "quotes": [
-          "In live section in previous section I am not visible to see the uploaded images in Hero section in image section and in video section"
+          "“Force all images, videos, hero background, and background music uploaded in Draft to be persistently bound and rendered identically in Preview and Published modes (Draft = Preview = Publish), with no placeholders, no regeneration, no asset reset, no lazy loading, and no media hiding—display only my uploaded content exactly as shown in Draft.”"
         ]
       },
       "acceptanceCriteria": [
-        "On a fresh load with an empty browser storage (no IndexedDB/localStorage media), the app fetches backend published media and displays: hero background (if published), any published image slots, any published video slots, and the published song (if present).",
-        "In the live/production deployment, the Hero section background and the Image/Video Memory sections visibly render the uploaded/published media without requiring a manual refresh.",
-        "If a slot is cleared in published media, the corresponding UI slot falls back to the existing placeholder media for that slot (no broken/pink/blank placeholders)."
+        "After clicking Submit in the Media Manager, navigating between Draft, Preview, and Published shows the exact same hero background, image grid content/order, video grid content, and background song without requiring a refresh.",
+        "On a fresh session where no local IndexedDB media exists, Preview and Published load the committed media from the backend and render it correctly (hero, all committed image slots, all committed video slots, song).",
+        "No slot that has committed uploaded media ever falls back to a static placeholder path in any mode.",
+        "The committed media set survives canister upgrades/deployments that do not intentionally wipe state (no unexpected resets)."
       ]
     },
     {
-      "id": "REQ-43",
-      "text": "Add an explicit, user-friendly pre-publish preview inside the Media Manager that lets the user confirm what they uploaded for Hero, Images, Videos, and Song before publishing, and make sure the preview uses the staged draft values (not only the currently published/live values).",
+      "id": "REQ-54",
+      "text": "Add a strict \"uploaded-only\" rendering rule for all modes: for hero background, each image slot, each video slot, and the background song, render the user’s committed uploaded media if present; if not present, render an explicit empty state (no placeholder assets, no default packaged media, no regeneration). This rule must apply consistently in Draft, Preview, and Published.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-4"
         ],
         "quotes": [
-          "please show the preview of uploaded image in the hero section image section and video section so I can go for it before publishing"
+          "with no placeholders, no regeneration, no asset reset ... display only my uploaded content exactly as shown in Draft."
         ]
       },
       "acceptanceCriteria": [
-        "Media Manager includes a clear section labeled in English (e.g., \"Preview\") that shows: the current draft Hero background, a grid preview of draft images in the current draft order with transforms applied, a grid preview of draft videos, and an audio preview for the draft song.",
-        "The preview reflects staged draft uploads/replacements/clears immediately after the user selects files, without requiring Submit.",
-        "When a slot is staged as 'clear' in the draft, the preview shows the placeholder/fallback for that slot (and does not continue showing an old image/video)."
+        "When a slot has no committed uploaded media, the UI does not display any placeholder image/video/audio for that slot in Draft, Preview, or Published.",
+        "Empty states use clear English-only user-facing text (e.g., \"No image uploaded for this slot.\") and do not break layout.",
+        "When a slot does have committed uploaded media, that media is rendered (and not replaced by an empty state)."
       ]
     },
     {
-      "id": "REQ-44",
-      "text": "Fix background audio playback so the user can reliably hear the song in both preview and live/production modes, including when the user uploads a custom song; ensure playback works across common mobile browsers where autoplay may be blocked.",
+      "id": "REQ-55",
+      "text": "Remove/disable any media lazy-loading or visibility gating that can cause committed uploaded media to appear missing (e.g., `loading=\"lazy\"` on committed images, deferred video source assignment that never triggers, conditional rendering that hides media until interaction). Committed uploaded media must be eagerly attached to the DOM and begin loading immediately on initial render across Draft, Preview, and Published.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-4"
         ],
         "quotes": [
-          "I am not listening audio also in preview section and in live section"
+          "no lazy loading, and no media hiding"
         ]
       },
       "acceptanceCriteria": [
-        "If autoplay is blocked, the UI provides an English call-to-action that clearly instructs the user to tap to start audio (e.g., the existing MusicPlayer play button must successfully start audible playback).",
-        "When the user uploads/replaces the background song and submits, the MusicPlayer updates to the new song and the user can play/pause it normally.",
-        "Audio playback works for supported upload types already accepted by the UI (.mp3 and .wav). If the file is not MP3, the audio element must still attempt playback (do not hardcode only audio/mpeg sources)."
+        "Committed uploaded hero background image begins loading immediately on page load (no user scroll/interaction required).",
+        "Committed uploaded image memory thumbnails begin loading immediately on page load (no `loading=\"lazy\"` on committed images).",
+        "Committed uploaded video thumbnails/players attach their `src` immediately on initial render (no intersection/scroll gating).",
+        "If autoplay is blocked for audio/video, the UI still renders the correct committed media and shows an English-only affordance to start playback; it must not replace media with placeholders."
       ]
     },
     {
-      "id": "REQ-45",
-      "text": "Update the Hero section Media entry-point button to remove the confusing \"Edit\" label and show a clear, consistent label in English on all screen sizes (keep the icon).",
-      "target": "frontend",
+      "id": "REQ-56",
+      "text": "Make backend-published media retrieval and frontend decoding/rendering deterministic and identical across Preview and Published builds: the frontend must always interpret the Motoko `getPublishedMedia()` response consistently (including optionals/tuples and slot indexing), producing stable, renderable URLs for every committed slot and never silently dropping media due to decode/mapping issues.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-4"
         ],
         "quotes": [
-          "remove the edit button of media role button so please show it clearly"
+          "persistently bound and rendered identically in Preview and Published modes (Draft = Preview = Publish)"
         ]
       },
       "acceptanceCriteria": [
-        "On mobile and desktop, the Hero section top-right button label reads \"Media\" (not \"Edit\").",
-        "The button retains an accessible English aria-label describing what it opens (media management for hero/images/videos/song)."
+        "For a known committed set containing: hero background + N images + M videos + song, Preview and Published both report the same decoded counts and render the same items.",
+        "No committed image/video/song is missing due to frontend mapping/slot-index mismatches between UI slots and backend storage.",
+        "If backend returns media for a slot, the frontend renders it; it must not fall back to placeholders or empty states for that slot.",
+        "If a backend fetch fails, the app shows a clear English-only error state without resetting already-visible committed media in the current session."
       ]
     },
     {
-      "id": "REQ-46",
-      "text": "Ensure 'clear' actions are easy to understand and reliably remove media references so the UI falls back to placeholders (Hero, individual image slots, individual video slots, and song) in both preview and live views after Submit.",
+      "id": "REQ-57",
+      "text": "Add one structured, English-only diagnostic console log on app start and one on every successful Submit that confirms the exact committed media state used for rendering across modes (counts for hero/images/videos/song, plus image order + transform counts). This diagnostics output must be identical in shape across Draft, Preview, and Published to aid verification that Draft = Preview = Published.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-4"
         ],
         "quotes": [
-          "fix everything I can properly clear reference"
+          "Force all images, videos, hero background, and background music ... rendered identically in Preview and Published modes"
         ]
       },
       "acceptanceCriteria": [
-        "Clearing a Hero/Image/Video/Song in the Media Manager draft updates the Media Manager preview immediately to show the placeholder/default for that media.",
-        "After clicking Submit, cleared items are removed from the live app view immediately (Hero/Image grid/Video grid/Song), without requiring a refresh.",
-        "After a full page reload, cleared items remain cleared (i.e., they do not reappear from stale local URLs)."
+        "On app start, exactly one structured console log is emitted summarizing the render source used and counts of committed hero/images/videos/song available.",
+        "On Submit success, exactly one structured console log is emitted summarizing what was committed (uploaded/cleared counts, order changed yes/no, transforms changed yes/no).",
+        "All diagnostic strings are in English.",
+        "Diagnostics do not include any user media bytes or personal content—only counts/booleans/slot indices."
       ]
     }
   ],
   "constraints": [
-    "All user-facing text must be in English.",
-    "Do not edit files under frontend/src/components/ui (shadcn/ui) or other immutable paths listed in SYSTEM_CONTEXT.",
-    "Backend must remain a single-actor Motoko canister; only add migration changes if existing stable state shape must change."
+    "Respect the single-actor backend architecture; keep all Motoko logic in backend/main.mo and create backend/migration.mo only if an upgrade requires state migration.",
+    "Do not modify any files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
+    "All user-facing text must be in English."
   ],
   "nonGoals": [
-    "Adding new authentication methods beyond Internet Identity.",
-    "Adding third-party storage/CDN for media.",
-    "Implementing real-time syncing or WebSocket-based updates."
+    "Do not add new third-party storage providers or external databases for media.",
+    "Do not introduce new authentication mechanisms beyond Internet Identity.",
+    "Do not change the romantic experience content/features unrelated to media rendering consistency."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

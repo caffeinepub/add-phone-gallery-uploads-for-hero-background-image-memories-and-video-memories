@@ -2,10 +2,79 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-uploaded-published-media-is-visible-in-both-the-app-s-preview-experience-and-the-live-production-experience-hero-background-all-image-memory-slots-all-video-memory-slots-and-the-background-song-must-render-using-the-current-mediastore-state-and-must-correctly-fall-back-to-backend-published-media-when-local-indexeddb-media-is-absent",
-      "featureTitle": "Ensure uploaded/published media is visible in both the app's preview experience and the live/production experience: Hero background, all Image Memory slots, all Video Memory slots, and the background song must render using the current MediaStore state and must correctly fall back to backend-published media when local IndexedDB media is absent.",
+      "featureId": "feature-unify-media-source-of-truth-so-that-the-same-committed-media-set-hero-background-43-image-slots-6-video-slots-and-background-song-is-what-renders-in-draft-preview-and-published-modes-draft-preview-published-after-a-successful-media-manager-submit-the-app-must-render-from-the-committed-set-and-must-not-show-any-older-placeholders-or-regenerated-static-assets-for-those-slots",
+      "featureTitle": "Unify media source-of-truth so that the same committed media set (hero background, 43 image slots, 6 video slots, and background song) is what renders in Draft, Preview, and Published modes (Draft = Preview = Published). After a successful Media Manager Submit, the app must render from the committed set and must not show any older placeholders or regenerated/static assets for those slots.",
       "files": [
+        "frontend/src/context/MediaStoreContext.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-53"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-strict-uploaded-only-rendering-rule-for-all-modes-for-hero-background-each-image-slot-each-video-slot-and-the-background-song-render-the-user-s-committed-uploaded-media-if-present-if-not-present-render-an-explicit-empty-state-no-placeholder-assets-no-default-packaged-media-no-regeneration-this-rule-must-apply-consistently-in-draft-preview-and-published",
+      "featureTitle": "Add a strict \"uploaded-only\" rendering rule for all modes: for hero background, each image slot, each video slot, and the background song, render the user’s committed uploaded media if present; if not present, render an explicit empty state (no placeholder assets, no default packaged media, no regeneration). This rule must apply consistently in Draft, Preview, and Published.",
+      "files": [
+        "frontend/public/PLACEHOLDER_MEDIA_README.txt",
         "frontend/src/components/HeroSection.tsx",
+        "frontend/src/components/ImageMemorySection.tsx",
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/components/MusicPlayer.tsx",
+        "frontend/src/components/VideoMemorySection.tsx",
+        "frontend/src/config/imageMemory.ts",
+        "frontend/src/config/videoMemory.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-54"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-remove-disable-any-media-lazy-loading-or-visibility-gating-that-can-cause-committed-uploaded-media-to-appear-missing-e-g-loading-lazy-on-committed-images-deferred-video-source-assignment-that-never-triggers-conditional-rendering-that-hides-media-until-interaction-committed-uploaded-media-must-be-eagerly-attached-to-the-dom-and-begin-loading-immediately-on-initial-render-across-draft-preview-and-published",
+      "featureTitle": "Remove/disable any media lazy-loading or visibility gating that can cause committed uploaded media to appear missing (e.g., `loading=\"lazy\"` on committed images, deferred video source assignment that never triggers, conditional rendering that hides media until interaction). Committed uploaded media must be eagerly attached to the DOM and begin loading immediately on initial render across Draft, Preview, and Published.",
+      "files": [
+        "frontend/src/components/FlipImageCard.tsx",
+        "frontend/src/components/HeroSection.tsx",
+        "frontend/src/components/MusicPlayer.tsx",
+        "frontend/src/components/VideoMemorySection.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-55"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-make-backend-published-media-retrieval-and-frontend-decoding-rendering-deterministic-and-identical-across-preview-and-published-builds-the-frontend-must-always-interpret-the-motoko-getpublishedmedia-response-consistently-including-optionals-tuples-and-slot-indexing-producing-stable-renderable-urls-for-every-committed-slot-and-never-silently-dropping-media-due-to-decode-mapping-issues",
+      "featureTitle": "Make backend-published media retrieval and frontend decoding/rendering deterministic and identical across Preview and Published builds: the frontend must always interpret the Motoko `getPublishedMedia()` response consistently (including optionals/tuples and slot indexing), producing stable, renderable URLs for every committed slot and never silently dropping media due to decode/mapping issues.",
+      "files": [
         "frontend/src/context/MediaStoreContext.tsx"
       ],
       "components": [
@@ -18,36 +87,17 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-42"
+        "REQ-56"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-an-explicit-user-friendly-pre-publish-preview-inside-the-media-manager-that-lets-the-user-confirm-what-they-uploaded-for-hero-images-videos-and-song-before-publishing-and-make-sure-the-preview-uses-the-staged-draft-values-not-only-the-currently-published-live-values",
-      "featureTitle": "Add an explicit, user-friendly pre-publish preview inside the Media Manager that lets the user confirm what they uploaded for Hero, Images, Videos, and Song before publishing, and make sure the preview uses the staged draft values (not only the currently published/live values).",
-      "files": [
-        "frontend/src/components/MediaManager.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-43"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-background-audio-playback-so-the-user-can-reliably-hear-the-song-in-both-preview-and-live-production-modes-including-when-the-user-uploads-a-custom-song-ensure-playback-works-across-common-mobile-browsers-where-autoplay-may-be-blocked",
-      "featureTitle": "Fix background audio playback so the user can reliably hear the song in both preview and live/production modes, including when the user uploads a custom song; ensure playback works across common mobile browsers where autoplay may be blocked.",
+      "featureId": "feature-add-one-structured-english-only-diagnostic-console-log-on-app-start-and-one-on-every-successful-submit-that-confirms-the-exact-committed-media-state-used-for-rendering-across-modes-counts-for-hero-images-videos-song-plus-image-order-transform-counts-this-diagnostics-output-must-be-identical-in-shape-across-draft-preview-and-published-to-aid-verification-that-draft-preview-published",
+      "featureTitle": "Add one structured, English-only diagnostic console log on app start and one on every successful Submit that confirms the exact committed media state used for rendering across modes (counts for hero/images/videos/song, plus image order + transform counts). This diagnostics output must be identical in shape across Draft, Preview, and Published to aid verification that Draft = Preview = Published.",
       "files": [
         "frontend/src/components/MediaManager.tsx",
-        "frontend/src/components/MusicPlayer.tsx"
+        "frontend/src/context/MediaStoreContext.tsx",
+        "frontend/src/lib/mediaDiagnostics.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -59,48 +109,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-44"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-hero-section-media-entry-point-button-to-remove-the-confusing-edit-label-and-show-a-clear-consistent-label-in-english-on-all-screen-sizes-keep-the-icon",
-      "featureTitle": "Update the Hero section Media entry-point button to remove the confusing \"Edit\" label and show a clear, consistent label in English on all screen sizes (keep the icon).",
-      "files": [
-        "frontend/src/components/HeroSection.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-45"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-ensure-clear-actions-are-easy-to-understand-and-reliably-remove-media-references-so-the-ui-falls-back-to-placeholders-hero-individual-image-slots-individual-video-slots-and-song-in-both-preview-and-live-views-after-submit",
-      "featureTitle": "Ensure 'clear' actions are easy to understand and reliably remove media references so the UI falls back to placeholders (Hero, individual image slots, individual video slots, and song) in both preview and live views after Submit.",
-      "files": [
-        "frontend/src/components/MediaManager.tsx",
-        "frontend/src/context/MediaStoreContext.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-46"
+        "REQ-57"
       ],
       "confidence": "high"
     }

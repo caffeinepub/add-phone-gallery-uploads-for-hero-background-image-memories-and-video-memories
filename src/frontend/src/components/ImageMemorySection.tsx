@@ -1,5 +1,6 @@
+import { Image } from 'lucide-react';
 import FlipImageCard from './FlipImageCard';
-import { imageMemoryData } from '../config/imageMemory';
+import { romanticMessages } from '../config/romanticMessages';
 import { useMediaStore } from '../hooks/useMediaStore';
 
 export default function ImageMemorySection() {
@@ -18,18 +19,30 @@ export default function ImageMemorySection() {
         {/* Image Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {imageOrder.map((slotId) => {
-            const item = imageMemoryData.find((d) => d.id === slotId);
-            if (!item) return null;
+            const imageUrl = imageUrls.get(slotId);
+            const transform = imageTransforms.get(slotId);
+            const message = romanticMessages[(slotId - 1) % romanticMessages.length];
 
-            // Use uploaded image if available, otherwise fallback to placeholder
-            const imageSrc = imageUrls.get(item.id) || item.imageSrc;
-            const transform = imageTransforms.get(item.id);
+            if (!imageUrl) {
+              // Empty state for missing slot
+              return (
+                <div
+                  key={slotId}
+                  className="relative aspect-square rounded-2xl overflow-hidden bg-rose-100 border-2 border-rose-200 flex items-center justify-center"
+                >
+                  <div className="text-center text-rose-300">
+                    <Image className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-xs">No image uploaded</p>
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <FlipImageCard
-                key={item.id}
-                imageSrc={imageSrc}
-                message={item.message}
+                key={slotId}
+                imageSrc={imageUrl}
+                message={message}
                 transform={transform}
               />
             );

@@ -1,13 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Fix media rendering and audio playback in preview and live modes, add a clear draft preview in the Media Manager, and clarify the Hero Media button label.
+**Goal:** Ensure Draft, Preview, and Published all render the exact same committed uploaded media set (hero background, 43 image slots, 6 video slots, background song) with no placeholders, resets, regeneration, lazy-loading, or hidden media.
 
 **Planned changes:**
-- Ensure Hero background, Image Memory slots, Video Memory slots, and background song render correctly in both preview and live/production by using current MediaStore state with fallback to backend-published media when local browser media is absent.
-- Add a Media Manager “Preview” section that shows staged draft Hero/Image/Video/Song selections immediately (including placeholder display for cleared draft slots) before publishing.
-- Restore reliable background audio playback in preview and live modes, including uploaded songs, with a clear tap-to-play path when autoplay is blocked and without hardcoding MP3-only sources.
-- Update the Hero section entry-point button label to “Media” (not “Edit”) across screen sizes, keeping the icon and an accessible English aria-label.
-- Make “clear” actions reliably remove media references so placeholders appear immediately after Submit and remain cleared after reload (no reappearing stale local URLs).
+- Unify the media “source of truth” so that after a successful Media Manager Submit, all modes (Draft/Preview/Published) render only the committed media set for hero, images, videos, and song.
+- Enforce an “uploaded-only” rendering rule across all modes: render committed uploaded media when present; otherwise show an explicit English-only empty state (no packaged placeholders/default assets).
+- Remove/disable lazy-loading and any visibility/interaction gating that can prevent committed media from appearing; ensure committed media attaches eagerly and begins loading immediately.
+- Make Preview/Published media retrieval and frontend decoding/mapping deterministic (consistent slot indexing and optionals/tuples handling) so committed items are not dropped or mis-mapped.
+- Add exactly one structured English-only diagnostic console log on app start and exactly one on every successful Submit summarizing committed media counts and basic state (no media bytes).
 
-**User-visible outcome:** Uploaded or published hero/images/videos/song consistently appear in preview and live modes; users can preview draft media before publishing, play the background song reliably (with a clear tap-to-start prompt if needed), see a clearly labeled “Media” button, and clear media so placeholders show immediately and persist after reload.
+**User-visible outcome:** After submitting media, switching between Draft, Preview, and Published shows the same uploaded hero background, image/video slots, and background song immediately and consistently (or clear empty states when nothing is uploaded), without placeholders or missing media.

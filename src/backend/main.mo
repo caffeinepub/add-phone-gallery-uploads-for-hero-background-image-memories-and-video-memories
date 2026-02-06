@@ -2,7 +2,6 @@ import Map "mo:core/Map";
 import Array "mo:core/Array";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
@@ -286,3 +285,4 @@ actor {
     publishedVersions.toArray();
   };
 };
+

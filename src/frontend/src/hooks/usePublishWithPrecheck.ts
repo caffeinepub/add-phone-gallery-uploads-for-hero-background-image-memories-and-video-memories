@@ -4,6 +4,7 @@ import { useMediaStore } from './useMediaStore';
 import type { PrePublishConfig } from '../backend';
 import { normalizeToDiagnostic, type DiagnosticPayload } from '../lib/deployDiagnostics';
 import { publishMediaToBackend } from '../lib/publishedMediaClient';
+import { logSubmitDiagnostic, type SubmitDiagnostic } from '../lib/mediaDiagnostics';
 import type { ImageTransform } from './useMediaDraft';
 
 export type PublishStatus = 'idle' | 'running' | 'succeeded' | 'failed';
@@ -28,6 +29,65 @@ export interface UsePublishWithPrecheckReturn {
   runPrecheck: (config: PrePublishConfig) => Promise<PublishResult>;
   publish: (changes: PublishChanges) => Promise<PublishResult>;
   reset: () => void;
+}
+
+/**
+ * Translate backend errors into user-friendly English messages
+ */
+function translateBackendError(error: unknown): { title: string; message: string; details?: string } {
+  const errorStr = String(error);
+  const errorMessage = error instanceof Error ? error.message : errorStr;
+
+  // Check for authorization errors
+  if (errorMessage.includes('Unauthorized') || errorMessage.includes('Only admins')) {
+    return {
+      title: 'Permission Denied',
+      message: 'You do not have permission to publish media. Please ensure you are logged in as an administrator.',
+      details: errorMessage,
+    };
+  }
+
+  // Check for invalid index errors
+  if (errorMessage.includes('Invalid image index')) {
+    return {
+      title: 'Invalid Image Slot',
+      message: 'An image was assigned to an invalid slot number. Please try again or contact support.',
+      details: errorMessage,
+    };
+  }
+
+  if (errorMessage.includes('Invalid video index')) {
+    return {
+      title: 'Invalid Video Slot',
+      message: 'A video was assigned to an invalid slot number. Please try again or contact support.',
+      details: errorMessage,
+    };
+  }
+
+  // Check for network/connection errors
+  if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('NetworkError')) {
+    return {
+      title: 'Network Error',
+      message: 'Unable to connect to the backend. Please check your internet connection and try again.',
+      details: errorMessage,
+    };
+  }
+
+  // Check for actor initialization errors
+  if (errorMessage.includes('actor') || errorMessage.includes('Actor not')) {
+    return {
+      title: 'Backend Connection Error',
+      message: 'The backend service is not ready. Please refresh the page and try again.',
+      details: errorMessage,
+    };
+  }
+
+  // Generic backend error
+  return {
+    title: 'Publish Failed',
+    message: 'An error occurred while publishing your media. Please try again.',
+    details: errorMessage,
+  };
 }
 
 export function usePublishWithPrecheck(): UsePublishWithPrecheckReturn {
@@ -104,7 +164,13 @@ export function usePublishWithPrecheck(): UsePublishWithPrecheckReturn {
             song: changes.song,
           });
         } catch (err) {
-          const diagnostic = normalizeToDiagnostic(err, backendPublishStep);
+          // Translate backend error to user-friendly message
+          const translated = translateBackendError(err);
+          const diagnostic: DiagnosticPayload = {
+            message: translated.title,
+            details: translated.details,
+            step: backendPublishStep,
+          };
           setStatus('failed');
           setError(diagnostic);
           return { success: false, diagnostic };
@@ -140,24 +206,36 @@ export function usePublishWithPrecheck(): UsePublishWithPrecheckReturn {
           return { success: false, diagnostic };
         }
 
-        // Log publish summary (single structured log)
-        const heroAction = changes.hero === 'clear' ? 'clear' : changes.hero instanceof File ? 'upload' : 'none';
+        // Step 5: Log submit summary (single structured log)
+        const heroUploaded = changes.hero instanceof File;
+        const heroCleared = changes.hero === 'clear';
         const imageUploads = Array.from(changes.images.values()).filter((v) => v instanceof File).length;
         const imageClears = Array.from(changes.images.values()).filter((v) => v === 'clear').length;
         const videoUploads = Array.from(changes.videos.values()).filter((v) => v instanceof File).length;
         const videoClears = Array.from(changes.videos.values()).filter((v) => v === 'clear').length;
-        const songAction = changes.song === 'clear' ? 'clear' : changes.song instanceof File ? 'upload' : 'none';
+        const songUploaded = changes.song instanceof File;
+        const songCleared = changes.song === 'clear';
         const orderChanged = changes.imageOrder.length > 0;
         const transformsChanged = changes.imageTransforms.size > 0;
 
-        console.log('Publish Summary:', {
-          hero: heroAction,
-          images: { uploads: imageUploads, clears: imageClears },
-          videos: { uploads: videoUploads, clears: videoClears },
-          song: songAction,
+        const diagnostic: SubmitDiagnostic = {
+          uploaded: {
+            hero: heroUploaded,
+            images: imageUploads,
+            videos: videoUploads,
+            song: songUploaded,
+          },
+          cleared: {
+            hero: heroCleared,
+            images: imageClears,
+            videos: videoClears,
+            song: songCleared,
+          },
           orderChanged,
           transformsChanged,
-        });
+        };
+
+        logSubmitDiagnostic(diagnostic);
 
         setStatus('succeeded');
         return { success: true };

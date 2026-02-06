@@ -1,119 +1,159 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix media rendering fallbacks, add draft preview, restore reliable audio playback, and clarify Media button label",
+  "title": "Uploaded-only, deterministic committed media rendering across Draft/Preview/Published",
   "requirements": [
     {
-      "id": "REQ-42",
-      "summary": "Ensure hero, image slots, video slots, and background song render in preview/live using MediaStore state with correct fallback to backend-published media when IndexedDB is empty.",
+      "id": "REQ-53",
+      "summary": "Render only the committed backend media set in all modes, and switch immediately to the committed set after Submit (no placeholder/static fallbacks).",
       "acceptanceCriteria": [
-        "On a fresh load with an empty browser storage (no IndexedDB/localStorage media), the app fetches backend published media and displays: hero background (if published), any published image slots, any published video slots, and the published song (if present).",
-        "In the live/production deployment, the Hero section background and the Image/Video Memory sections visibly render the uploaded/published media without requiring a manual refresh.",
-        "If a slot is cleared in published media, the corresponding UI slot falls back to the existing placeholder media for that slot (no broken/pink/blank placeholders)."
+        "After clicking Submit in the Media Manager, navigating between Draft, Preview, and Published shows the exact same hero background, image grid content/order, video grid content, and background song without requiring a refresh.",
+        "On a fresh session where no local IndexedDB media exists, Preview and Published load the committed media from the backend and render it correctly (hero, all committed image slots, all committed video slots, song).",
+        "No slot that has committed uploaded media ever falls back to a static placeholder path in any mode.",
+        "The committed media set survives canister upgrades/deployments that do not intentionally wipe state (no unexpected resets)."
       ],
       "file_operations": [
         {
           "path": "frontend/src/context/MediaStoreContext.tsx",
           "operation": "modify",
-          "description": "Harden the media initialization/refresh flow so published media is always fetched and merged when local IndexedDB is absent, and provide a safe in-app refresh capability after publish so preview/live views update without manual reload. Verify the component's usage instructions before implementing."
+          "description": "Make the backend-published committed media set the sole rendering source for hero/images/videos/song (no IndexedDB/placeholder merging for main rendering); on successful refresh after Submit, replace the entire committed set deterministically (including clearing slots when backend has no media) and avoid reverting to any packaged/static placeholder assets. Use blob-storage ExternalBlob direct URLs for rendering committed media; verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/lib/publishedMediaClient.ts",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Ensure backend-published media URLs are derived consistently for hero/images/videos/song using ExternalBlob direct URLs, and make the fetch logic resilient (clear handling and empty-slot behavior) so UI reliably falls back to placeholders when published items are null. Verify the component's usage instructions before implementing."
-        },
+          "description": "Ensure the main app sections (Hero/Image/Video/Music) consume only the committed MediaStoreContext render state so that Draft/Preview/Published behave identically and switch immediately after Submit (no refresh required)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-54",
+      "summary": "Apply an uploaded-only rendering rule: if a committed slot is missing, show explicit English empty states (no placeholder assets) for hero, images, videos, and song across all modes.",
+      "acceptanceCriteria": [
+        "When a slot has no committed uploaded media, the UI does not display any placeholder image/video/audio for that slot in Draft, Preview, or Published.",
+        "Empty states use clear English-only user-facing text (e.g., \"No image uploaded for this slot.\") and do not break layout.",
+        "When a slot does have committed uploaded media, that media is rendered (and not replaced by an empty state)."
+      ],
+      "file_operations": [
         {
           "path": "frontend/src/components/HeroSection.tsx",
           "operation": "modify",
-          "description": "Ensure hero background rendering continues to fall back to the existing placeholder image whenever the MediaStore hero URL is null/cleared, across preview and production builds."
+          "description": "Remove the packaged hero background fallback and render either the committed uploaded hero background or an explicit English empty-state UI (no static placeholder images)."
         },
         {
           "path": "frontend/src/components/ImageMemorySection.tsx",
           "operation": "modify",
-          "description": "Confirm image slot rendering always falls back to configured placeholder media when a slot has no MediaStore URL (including when published media is empty or cleared)."
+          "description": "Remove per-slot fallback to config placeholder image paths; render FlipImageCard only when committed uploaded media exists for the slot, otherwise render a stable English empty state that preserves the grid layout."
         },
         {
           "path": "frontend/src/components/VideoMemorySection.tsx",
           "operation": "modify",
-          "description": "Confirm video slot rendering always falls back to configured placeholder media when a slot has no MediaStore URL (including when published media is empty or cleared)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-43",
-      "summary": "Add a clear pre-publish draft preview inside the Media Manager showing staged Hero, Images, Videos, and Song (including order/transforms and clear placeholders).",
-      "acceptanceCriteria": [
-        "Media Manager includes a clear section labeled in English (e.g., \"Preview\") that shows: the current draft Hero background, a grid preview of draft images in the current draft order with transforms applied, a grid preview of draft videos, and an audio preview for the draft song.",
-        "The preview reflects staged draft uploads/replacements/clears immediately after the user selects files, without requiring Submit.",
-        "When a slot is staged as 'clear' in the draft, the preview shows the placeholder/fallback for that slot (and does not continue showing an old image/video)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/MediaManager.tsx",
-          "operation": "modify",
-          "description": "Add an explicit English-labeled \"Preview\" section within the Media Manager that summarizes draft/staged values (hero, images ordered with transforms, videos, and song audio) and displays placeholders whenever a slot is staged as clear. Ensure the preview uses staged draft values immediately after selection (no submit required)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-44",
-      "summary": "Fix background audio playback reliability across preview/live (including uploaded songs) and improve behavior when autoplay is blocked on mobile browsers.",
-      "acceptanceCriteria": [
-        "If autoplay is blocked, the UI provides an English call-to-action that clearly instructs the user to tap to start audio (e.g., the existing MusicPlayer play button must successfully start audible playback).",
-        "When the user uploads/replaces the background song and submits, the MusicPlayer updates to the new song and the user can play/pause it normally.",
-        "Audio playback works for supported upload types already accepted by the UI (.mp3 and .wav). If the file is not MP3, the audio element must still attempt playback (do not hardcode only audio/mpeg sources)."
-      ],
-      "file_operations": [
+          "description": "Remove per-slot fallback to config placeholder video paths and remove error-driven fallback poster behavior that simulates placeholder content; render either the committed uploaded video or an explicit English empty state per slot without breaking layout."
+        },
         {
           "path": "frontend/src/components/MusicPlayer.tsx",
           "operation": "modify",
-          "description": "Update MusicPlayer to avoid hardcoding only audio/mpeg sources, reliably reload/play when the song URL changes, and show an English tap-to-start call-to-action when autoplay is blocked while keeping the play button as the primary control."
+          "description": "Remove the packaged default song fallback; if no committed uploaded song exists, do not render an <audio> source and instead render an English-only empty/disabled player state that does not imply a default song."
         },
         {
           "path": "frontend/src/components/MediaManager.tsx",
           "operation": "modify",
-          "description": "Ensure the draft song preview audio control attempts playback for both .mp3 and .wav uploads and stays in sync with staged draft changes (replace/clear) before submit."
+          "description": "Update all user-facing text that references restoring placeholders/defaults to instead describe clearing to an empty state; ensure the Media Manager preview tab uses English empty-state language (no \"Default placeholder\" / \"Default song will play\")."
+        },
+        {
+          "path": "frontend/src/config/imageMemory.ts",
+          "operation": "modify",
+          "description": "Remove static placeholder image paths from the image memory configuration so the UI cannot fall back to packaged assets for any slot; keep only slot IDs and messages needed for layout and flip-card text."
+        },
+        {
+          "path": "frontend/src/config/videoMemory.ts",
+          "operation": "modify",
+          "description": "Remove static placeholder video paths from the video memory configuration so the UI cannot fall back to packaged assets for any slot; keep only slot IDs needed for layout."
+        },
+        {
+          "path": "frontend/public/PLACEHOLDER_MEDIA_README.txt",
+          "operation": "modify",
+          "description": "Update documentation to reflect uploaded-only rendering behavior (no packaged placeholders/default media fallbacks) and clarify that missing slots render explicit empty states."
         }
       ]
     },
     {
-      "id": "REQ-45",
-      "summary": "Rename the Hero section Media entry-point button label to consistently read \"Media\" on all screen sizes while keeping the icon and accessibility label.",
+      "id": "REQ-55",
+      "summary": "Disable lazy-loading/visibility gating so committed uploaded media attaches immediately and starts loading on initial render across all modes.",
       "acceptanceCriteria": [
-        "On mobile and desktop, the Hero section top-right button label reads \"Media\" (not \"Edit\").",
-        "The button retains an accessible English aria-label describing what it opens (media management for hero/images/videos/song)."
+        "Committed uploaded hero background image begins loading immediately on page load (no user scroll/interaction required).",
+        "Committed uploaded image memory thumbnails begin loading immediately on page load (no `loading=\"lazy\"` on committed images).",
+        "Committed uploaded video thumbnails/players attach their `src` immediately on initial render (no intersection/scroll gating).",
+        "If autoplay is blocked for audio/video, the UI still renders the correct committed media and shows an English-only affordance to start playback; it must not replace media with placeholders."
       ],
       "file_operations": [
         {
           "path": "frontend/src/components/HeroSection.tsx",
           "operation": "modify",
-          "description": "Change the Hero section top-right button text so it always displays the English label \"Media\" across responsive breakpoints, keep the icon, and preserve/confirm the English aria-label."
+          "description": "Ensure committed hero background is eagerly applied (no conditional visibility gating that delays attachment/loading) and that empty state is explicit when missing."
+        },
+        {
+          "path": "frontend/src/components/FlipImageCard.tsx",
+          "operation": "modify",
+          "description": "Ensure committed images are eagerly attached and do not use lazy-loading attributes; remove any error fallback behavior that could mask missing committed media with pseudo-placeholders (keep failures as explicit/benign UI behavior)."
+        },
+        {
+          "path": "frontend/src/components/VideoMemorySection.tsx",
+          "operation": "modify",
+          "description": "Ensure committed videos attach their src immediately on first render (no deferred assignment or interaction gates); keep controls visible and show an English-only play affordance if autoplay is blocked, without substituting placeholders."
+        },
+        {
+          "path": "frontend/src/components/MusicPlayer.tsx",
+          "operation": "modify",
+          "description": "When a committed song exists, keep eager preload behavior; if autoplay is blocked, display an English-only prompt to start playback while still rendering the committed song source (and never falling back to a default packaged song)."
         }
       ]
     },
     {
-      "id": "REQ-46",
-      "summary": "Make clear actions understandable and ensure they reliably remove media references so UI falls back to placeholders immediately after Submit and after reload.",
+      "id": "REQ-56",
+      "summary": "Make frontend decoding/mapping of getPublishedMedia deterministic so Preview and Published interpret the response identically with stable slot indexing and error handling.",
       "acceptanceCriteria": [
-        "Clearing a Hero/Image/Video/Song in the Media Manager draft updates the Media Manager preview immediately to show the placeholder/default for that media.",
-        "After clicking Submit, cleared items are removed from the live app view immediately (Hero/Image grid/Video grid/Song), without requiring a refresh.",
-        "After a full page reload, cleared items remain cleared (i.e., they do not reappear from stale local URLs)."
+        "For a known committed set containing: hero background + N images + M videos + song, Preview and Published both report the same decoded counts and render the same items.",
+        "No committed image/video/song is missing due to frontend mapping/slot-index mismatches between UI slots and backend storage.",
+        "If backend returns media for a slot, the frontend renders it; it must not fall back to placeholders or empty states for that slot.",
+        "If a backend fetch fails, the app shows a clear English-only error state without resetting already-visible committed media in the current session."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/MediaManager.tsx",
+          "path": "frontend/src/lib/publishedMediaClient.ts",
           "operation": "modify",
-          "description": "Improve/standardize English clear affordances and ensure clear actions update the Media Manager's preview instantly (hero/images/videos/song), never showing stale preview URLs after a draft clear."
-        },
-        {
-          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "operation": "modify",
-          "description": "After a successful publish, ensure the app's live MediaStore state is refreshed/applied so cleared items disappear immediately in the main view without requiring a full page reload."
+          "description": "Fix deterministic decoding for PublishedMedia so tuple entries ([name, ExternalBlob] | null) are not misinterpreted as optionals; ensure stable 0-based array index to 1-based UI slot mapping for images/videos and stable optional handling for hero/song. Use blob-storage ExternalBlob.getDirectURL to produce renderable URLs; verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/context/MediaStoreContext.tsx",
           "operation": "modify",
-          "description": "Ensure MediaStore state updates and persisted storage updates fully remove cleared references (including any leftover blob URL bookkeeping) so cleared media does not reappear after reload."
+          "description": "On backend fetch failures, preserve the current committed render state and surface a clear English-only error indicator/state (without resetting media to empty/placeholder) while keeping subsequent refresh attempts possible."
+        }
+      ]
+    },
+    {
+      "id": "REQ-57",
+      "summary": "Add structured, English-only diagnostic console logs on app start and on each successful Submit, reporting committed media counts and ordering/transform metadata without content.",
+      "acceptanceCriteria": [
+        "On app start, exactly one structured console log is emitted summarizing the render source used and counts of committed hero/images/videos/song available.",
+        "On Submit success, exactly one structured console log is emitted summarizing what was committed (uploaded/cleared counts, order changed yes/no, transforms changed yes/no).",
+        "All diagnostic strings are in English.",
+        "Diagnostics do not include any user media bytes or personal content—only counts/booleans/slot indices."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/lib/mediaDiagnostics.ts",
+          "operation": "create",
+          "description": "Create a small diagnostics helper to emit structured, English-only logs with a fixed shape for (1) app-start render state and (2) submit-success commit summary; ensure payload includes only counts/booleans/slot indices and no media bytes or user content."
+        },
+        {
+          "path": "frontend/src/context/MediaStoreContext.tsx",
+          "operation": "modify",
+          "description": "Emit exactly one structured diagnostics log on app start after the committed render state is established (hero/images/videos/song counts, image order length/order, transform count, and render source description)."
+        },
+        {
+          "path": "frontend/src/components/MediaManager.tsx",
+          "operation": "modify",
+          "description": "On successful Submit, emit exactly one structured diagnostics log summarizing what was committed (uploaded/cleared counts by media type, order changed yes/no, transforms changed yes/no) using the shared diagnostics helper."
         }
       ]
     }

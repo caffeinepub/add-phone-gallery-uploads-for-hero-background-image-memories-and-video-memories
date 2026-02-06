@@ -169,7 +169,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearHero() {
-    if (!confirm('Clear hero background? This will restore the default placeholder.')) return;
+    if (!confirm('Clear hero background? This will remove the uploaded background.')) return;
     setHero('clear');
     setPreviewUrls((prev) => {
       if (prev.hero) URL.revokeObjectURL(prev.hero);
@@ -178,7 +178,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearImage(slotIndex: number) {
-    if (!confirm('Clear this image? This will restore the default placeholder.')) return;
+    if (!confirm('Clear this image? This will remove the uploaded image.')) return;
     setImage(slotIndex, 'clear');
     const previewUrl = previewUrls.images.get(slotIndex);
     if (previewUrl) {
@@ -192,7 +192,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearVideo(slotIndex: number) {
-    if (!confirm('Clear this video? This will restore the default placeholder.')) return;
+    if (!confirm('Clear this video? This will remove the uploaded video.')) return;
     setVideo(slotIndex, 'clear');
     const previewUrl = previewUrls.videos.get(slotIndex);
     if (previewUrl) {
@@ -206,7 +206,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearSong() {
-    if (!confirm('Clear background song? This will restore the default song.')) return;
+    if (!confirm('Clear background song? This will remove the uploaded song.')) return;
     setSong('clear');
     setPreviewUrls((prev) => {
       if (prev.song) URL.revokeObjectURL(prev.song);
@@ -309,6 +309,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
             src={imageUrl}
             alt={`Memory ${slotIndex}`}
             className="w-full h-full object-cover"
+            loading="eager"
             style={
               transform
                 ? {
@@ -459,7 +460,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
     return (
       <div className="relative aspect-[9/16] rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50 hover:border-rose-400 transition-colors">
         {hasVideo && videoUrl ? (
-          <video src={videoUrl} className="w-full h-full object-cover" muted playsInline />
+          <video src={videoUrl} className="w-full h-full object-cover" muted playsInline preload="auto" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-rose-300">
             <Video className="w-8 h-8" />
@@ -721,12 +722,12 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                     </h4>
                     <div className="relative aspect-video max-w-md mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
                       {currentHeroUrl ? (
-                        <img src={currentHeroUrl} alt="Hero preview" className="w-full h-full object-cover" />
+                        <img src={currentHeroUrl} alt="Hero preview" className="w-full h-full object-cover" loading="eager" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-rose-300">
                           <div className="text-center">
                             <Image className="w-12 h-12 mx-auto mb-2" />
-                            <p className="text-sm">Default placeholder</p>
+                            <p className="text-sm">No hero background uploaded</p>
                           </div>
                         </div>
                       )}
@@ -758,6 +759,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                                 src={imageUrl}
                                 alt={`Preview ${slotIndex}`}
                                 className="w-full h-full object-cover"
+                                loading="eager"
                                 style={
                                   transform
                                     ? {
@@ -802,7 +804,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                         return (
                           <div key={slotIndex} className="relative aspect-[9/16] rounded border border-rose-200 bg-rose-50 overflow-hidden">
                             {hasVideo && videoUrl ? (
-                              <video src={videoUrl} className="w-full h-full object-cover" muted playsInline />
+                              <video src={videoUrl} className="w-full h-full object-cover" muted playsInline preload="auto" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-rose-300">
                                 <Video className="w-4 h-4" />
@@ -829,7 +831,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                           <div className="flex items-center justify-center text-rose-600">
                             <Music className="w-12 h-12" />
                           </div>
-                          <audio src={currentSongUrl} controls className="w-full" />
+                          <audio src={currentSongUrl} controls className="w-full" preload="auto" />
                           <p className="text-center text-sm text-rose-700 font-medium">Custom song</p>
                         </div>
                       ) : (
@@ -837,7 +839,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                           <div className="flex items-center justify-center text-rose-300">
                             <Music className="w-12 h-12" />
                           </div>
-                          <p className="text-center text-sm text-rose-600">Default song will play</p>
+                          <p className="text-center text-sm text-rose-600">No song uploaded</p>
                         </div>
                       )}
                     </div>
@@ -868,7 +870,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
 
                 <div className="relative aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
                   {currentHeroUrl ? (
-                    <img src={currentHeroUrl} alt="Hero background" className="w-full h-full object-cover" />
+                    <img src={currentHeroUrl} alt="Hero background" className="w-full h-full object-cover" loading="eager" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-rose-300">
                       <Image className="w-16 h-16" />
@@ -998,7 +1000,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                       <div className="flex items-center justify-center text-rose-600">
                         <Music className="w-16 h-16" />
                       </div>
-                      <audio src={currentSongUrl} controls className="w-full" />
+                      <audio src={currentSongUrl} controls className="w-full" preload="auto" />
                       <p className="text-center text-sm text-rose-700 font-medium">Custom song uploaded</p>
                     </div>
                   ) : (
@@ -1006,7 +1008,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                       <div className="flex items-center justify-center text-rose-300">
                         <Music className="w-16 h-16" />
                       </div>
-                      <p className="text-center text-sm text-rose-600">No custom song uploaded. Default song will play.</p>
+                      <p className="text-center text-sm text-rose-600">No custom song uploaded</p>
                     </div>
                   )}
 

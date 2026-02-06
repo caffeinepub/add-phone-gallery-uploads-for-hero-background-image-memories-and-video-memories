@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 35,
+  "projectStateVersion": 41,
   "summary": "ICP canister dapp scaffolded with a Motoko backend and a React + Tailwind (shadcn/ui) frontend for an interactive romantic/“surprise” experience, including Internet Identity login gating, configurable memory sections (images/videos), popups (love letter/proposal), and animated visual effects, packaged with build/deploy templates for IC.",
   "architectural_notes": [
     "Frontend uses React + Vite with TailwindCSS and shadcn/ui component set.",
@@ -9,7 +9,8 @@
     "Includes IC canister scaffolding (Motoko backend, Candid bindings) plus deploy/build template scripts.",
     "Media Manager 'Submit' action should atomically apply/publish all staged media changes so the Image section shows all submitted photos and the Video section shows all submitted videos after submission.",
     "Media Manager should provide per-slot controls to add/replace media from phone gallery across Hero, Image grid, and Video grid; include drag/reorder and per-item adjust flows.",
-    "Preview vs Live workflow should clearly display the currently uploaded/staged media (hero, image grid, video grid, song) before publishing; simplify/remove confusing Media Manager “Edit” entry control to make the preview flow obvious."
+    "Preview vs Live workflow should clearly display the currently uploaded/staged media (hero, image grid, video grid, song) before publishing; simplify/remove confusing Media Manager “Edit” entry control to make the preview flow obvious.",
+    "User requirement: Draft = Preview = Published must render only uploaded media (no placeholders/fallbacks), with identical behavior across modes (no regeneration/reset, no lazy loading or hiding)."
   ],
   "known_issues": [
     "Media Manager \"Submit\" button is not working (click does not apply/publish staged draft changes).",
@@ -477,6 +478,94 @@
         "REQ-46"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-frontend-to-backend-slot-index-mapping-when-publishing-and-clearing-images-and-videos-so-that-backend-storage-0-based-arrays-correctly-aligns-with-ui-slots-1-43-for-images-1-6-for-videos-and-published-media-becomes-visible-in-preview-mode",
+      "title": "Fix the frontend-to-backend slot index mapping when publishing and clearing Images and Videos so that backend storage (0-based arrays) correctly aligns with UI slots (1–43 for images, 1–6 for videos) and published media becomes visible in preview mode.",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-preview-mode-reliably-loads-backend-published-media-hero-all-image-slots-all-video-slots-and-song-on-a-fresh-origin-session-where-local-indexeddb-media-is-absent-and-that-the-ui-renders-the-backend-fetched-urls-without-requiring-a-manual-refresh",
+      "title": "Ensure preview mode reliably loads backend-published media (hero, all image slots, all video slots, and song) on a fresh origin/session where local IndexedDB media is absent, and that the UI renders the backend-fetched URLs without requiring a manual refresh.",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-if-backend-media-publish-fails-during-submit-e-g-due-to-index-mapping-or-authorization-show-a-clear-english-error-in-the-media-manager-error-panel-and-keep-the-dialog-open-so-the-user-can-retry-after-adjusting-changes",
+      "title": "If backend media publish fails during Submit (e.g., due to index mapping or authorization), show a clear English error in the Media Manager error panel and keep the dialog open so the user can retry after adjusting changes.",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-frontend-decoding-mapping-of-backend-getpublishedmedia-so-that-hero-background-image-slots-1-43-video-slots-1-6-and-background-song-urls-are-correctly-derived-from-the-motoko-publishedmedia-optional-tuple-shapes-and-reliably-render-in-preview-and-published-modes",
+      "title": "Fix frontend decoding/mapping of backend `getPublishedMedia()` so that Hero background, Image slots (1–43), Video slots (1–6), and Background song URLs are correctly derived from the Motoko `PublishedMedia` optional/tuple shapes and reliably render in Preview and Published modes.",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-backend-refresh-rehydration-in-mediastorecontext-resilient-so-that-a-failed-or-empty-backend-fetch-does-not-wipe-already-visible-local-media-in-the-editor-only-replace-local-media-with-backend-urls-when-backend-fetch-succeeds-and-provides-a-valid-value-for-that-slot-type",
+      "title": "Make backend refresh/rehydration in `MediaStoreContext` resilient so that a failed or empty backend fetch does not wipe already-visible local media in the editor; only replace local media with backend URLs when backend fetch succeeds and provides a valid value for that slot/type.",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-single-structured-diagnostic-console-log-on-backend-media-load-that-includes-counts-of-successfully-decoded-backend-hero-images-videos-song-after-fetchpublishedmedia-runs-to-make-it-easy-to-confirm-whether-preview-published-mode-is-pulling-media-from-the-backend",
+      "title": "Add a single, structured diagnostic console log on backend media load that includes counts of successfully decoded backend hero/images/videos/song after `fetchPublishedMedia()` runs, to make it easy to confirm whether Preview/Published mode is pulling media from the backend.",
+      "reqIds": [
+        "REQ-52"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-unify-media-source-of-truth-so-that-the-same-committed-media-set-hero-background-43-image-slots-6-video-slots-and-background-song-is-what-renders-in-draft-preview-and-published-modes-draft-preview-published-after-a-successful-media-manager-submit-the-app-must-render-from-the-committed-set-and-must-not-show-any-older-placeholders-or-regenerated-static-assets-for-those-slots",
+      "title": "Unify media source-of-truth so that the same committed media set (hero background, 43 image slots, 6 video slots, and background song) is what renders in Draft, Preview, and Published modes (Draft = Preview = Published). After a successful Media Manager Submit, the app must render from the committed set and must not show any older placeholders or regenerated/static assets for those slots.",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-strict-uploaded-only-rendering-rule-for-all-modes-for-hero-background-each-image-slot-each-video-slot-and-the-background-song-render-the-user-s-committed-uploaded-media-if-present-if-not-present-render-an-explicit-empty-state-no-placeholder-assets-no-default-packaged-media-no-regeneration-this-rule-must-apply-consistently-in-draft-preview-and-published",
+      "title": "Add a strict \"uploaded-only\" rendering rule for all modes: for hero background, each image slot, each video slot, and the background song, render the user’s committed uploaded media if present; if not present, render an explicit empty state (no placeholder assets, no default packaged media, no regeneration). This rule must apply consistently in Draft, Preview, and Published.",
+      "reqIds": [
+        "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-disable-any-media-lazy-loading-or-visibility-gating-that-can-cause-committed-uploaded-media-to-appear-missing-e-g-loading-lazy-on-committed-images-deferred-video-source-assignment-that-never-triggers-conditional-rendering-that-hides-media-until-interaction-committed-uploaded-media-must-be-eagerly-attached-to-the-dom-and-begin-loading-immediately-on-initial-render-across-draft-preview-and-published",
+      "title": "Remove/disable any media lazy-loading or visibility gating that can cause committed uploaded media to appear missing (e.g., `loading=\"lazy\"` on committed images, deferred video source assignment that never triggers, conditional rendering that hides media until interaction). Committed uploaded media must be eagerly attached to the DOM and begin loading immediately on initial render across Draft, Preview, and Published.",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-backend-published-media-retrieval-and-frontend-decoding-rendering-deterministic-and-identical-across-preview-and-published-builds-the-frontend-must-always-interpret-the-motoko-getpublishedmedia-response-consistently-including-optionals-tuples-and-slot-indexing-producing-stable-renderable-urls-for-every-committed-slot-and-never-silently-dropping-media-due-to-decode-mapping-issues",
+      "title": "Make backend-published media retrieval and frontend decoding/rendering deterministic and identical across Preview and Published builds: the frontend must always interpret the Motoko `getPublishedMedia()` response consistently (including optionals/tuples and slot indexing), producing stable, renderable URLs for every committed slot and never silently dropping media due to decode/mapping issues.",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-one-structured-english-only-diagnostic-console-log-on-app-start-and-one-on-every-successful-submit-that-confirms-the-exact-committed-media-state-used-for-rendering-across-modes-counts-for-hero-images-videos-song-plus-image-order-transform-counts-this-diagnostics-output-must-be-identical-in-shape-across-draft-preview-and-published-to-aid-verification-that-draft-preview-published",
+      "title": "Add one structured, English-only diagnostic console log on app start and one on every successful Submit that confirms the exact committed media state used for rendering across modes (counts for hero/images/videos/song, plus image order + transform counts). This diagnostics output must be identical in shape across Draft, Preview, and Published to aid verification that Draft = Preview = Published.",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -541,6 +630,12 @@
     {
       "id": "AR-8",
       "summary": "Improve media publish/preview UX: clearly show uploaded Hero/Image/Video previews before publishing, and remove/simplify the Media Manager “Edit” button/entry control for clarity.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Ensure Draft/Preview/Published render identically using only the user’s uploaded media (hero/images/videos/song) with persistent binding across modes; disable placeholder fallbacks, regeneration/asset reset, lazy-loading, or any media hiding so the published experience matches Draft exactly.",
       "reqIds": [],
       "status": "pending"
     }

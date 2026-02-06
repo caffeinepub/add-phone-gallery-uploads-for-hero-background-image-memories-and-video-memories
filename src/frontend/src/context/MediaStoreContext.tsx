@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { getAllMediaOfType, saveMedia, clearAllMediaOfType, clearMedia } from '../lib/localMediaStore';
 import { useActor } from '../hooks/useActor';
-import { fetchPublishedMedia, getMediaAvailability } from '../lib/publishedMediaClient';
+import { fetchPublishedMedia } from '../lib/publishedMediaClient';
+import { logAppStartDiagnostic, type AppStartDiagnostic } from '../lib/mediaDiagnostics';
 import type { ImageTransform } from '../hooks/useMediaDraft';
 
 interface MediaStoreContextValue {
@@ -49,23 +50,10 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   const [imageTransforms, setImageTransforms] = useState<Map<number, ImageTransform>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
 
-  // Track which URLs are blob: URLs (need cleanup) vs direct URLs (no cleanup)
-  const blobUrlsRef = useRef<Set<string>>(new Set());
   const diagnosticLoggedRef = useRef(false);
+  const [backendFetchError, setBackendFetchError] = useState<string | null>(null);
 
-  // Cleanup blob: URLs ONLY on unmount
-  useEffect(() => {
-    return () => {
-      blobUrlsRef.current.forEach((url) => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-      blobUrlsRef.current.clear();
-    };
-  }, []);
-
-  // Load persisted media on mount
+  // Load persisted media on mount - wait for actor to be ready
   useEffect(() => {
     if (!actorFetching && actor) {
       loadAllMedia();
@@ -75,91 +63,31 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function loadAllMedia() {
     setIsLoading(true);
     try {
-      // Step 1: Load from IndexedDB first (fast, for draft mode)
-      const heroBlob = await getAllMediaOfType('hero');
-      const imageBlobs = await getAllMediaOfType('image');
-      const videoBlobs = await getAllMediaOfType('video');
-      const songBlob = await getAllMediaOfType('song');
-
-      const localHeroExists = heroBlob.has(0);
-      const localImageCount = imageBlobs.size;
-      const localVideoCount = videoBlobs.size;
-      const localSongExists = songBlob.has(0);
-
-      // Create object URLs from local blobs
-      let newHeroUrl: string | null = null;
-      const newImageUrls = new Map<number, string>();
-      const newVideoUrls = new Map<number, string>();
-      let newSongUrl: string | null = null;
-
-      if (localHeroExists) {
-        newHeroUrl = URL.createObjectURL(heroBlob.get(0)!);
-        blobUrlsRef.current.add(newHeroUrl);
-      }
-
-      imageBlobs.forEach((blob, index) => {
-        if (index >= 1 && index <= 43) {
-          const url = URL.createObjectURL(blob);
-          newImageUrls.set(index, url);
-          blobUrlsRef.current.add(url);
-        }
-      });
-
-      videoBlobs.forEach((blob, index) => {
-        if (index >= 1 && index <= 6) {
-          const url = URL.createObjectURL(blob);
-          newVideoUrls.set(index, url);
-          blobUrlsRef.current.add(url);
-        }
-      });
-
-      if (localSongExists) {
-        newSongUrl = URL.createObjectURL(songBlob.get(0)!);
-        blobUrlsRef.current.add(newSongUrl);
-      }
-
-      // Step 2: Fetch backend published media as fallback
-      let backendMedia = {
-        heroUrl: null as string | null,
-        imageUrls: new Map<number, string>(),
-        videoUrls: new Map<number, string>(),
-        songUrl: null as string | null,
-      };
+      // Fetch backend published media as the sole rendering source
+      let committedHeroUrl: string | null = null;
+      let committedImageUrls = new Map<number, string>();
+      let committedVideoUrls = new Map<number, string>();
+      let committedSongUrl: string | null = null;
 
       if (actor) {
         try {
-          backendMedia = await fetchPublishedMedia(actor);
+          const backendMedia = await fetchPublishedMedia(actor);
+          committedHeroUrl = backendMedia.heroUrl;
+          committedImageUrls = backendMedia.imageUrls;
+          committedVideoUrls = backendMedia.videoUrls;
+          committedSongUrl = backendMedia.songUrl;
+          setBackendFetchError(null);
         } catch (error) {
           console.error('Failed to fetch backend published media:', error);
+          setBackendFetchError(String(error));
         }
       }
 
-      // Step 3: Merge local and backend (prefer local for draft, fallback to backend)
-      if (!newHeroUrl && backendMedia.heroUrl) {
-        newHeroUrl = backendMedia.heroUrl;
-      }
-
-      backendMedia.imageUrls.forEach((url, index) => {
-        if (!newImageUrls.has(index)) {
-          newImageUrls.set(index, url);
-        }
-      });
-
-      backendMedia.videoUrls.forEach((url, index) => {
-        if (!newVideoUrls.has(index)) {
-          newVideoUrls.set(index, url);
-        }
-      });
-
-      if (!newSongUrl && backendMedia.songUrl) {
-        newSongUrl = backendMedia.songUrl;
-      }
-
-      // Update state
-      setHeroBackgroundUrl(newHeroUrl);
-      setImageUrls(newImageUrls);
-      setVideoUrls(newVideoUrls);
-      setSongUrl(newSongUrl);
+      // Update state with committed media only
+      setHeroBackgroundUrl(committedHeroUrl);
+      setImageUrls(committedImageUrls);
+      setVideoUrls(committedVideoUrls);
+      setSongUrl(committedSongUrl);
 
       // Load image order and transforms from localStorage
       const savedOrder = localStorage.getItem('imageOrder');
@@ -187,28 +115,25 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
 
       // Diagnostic logging (once per app start)
       if (!diagnosticLoggedRef.current) {
-        const availability = getMediaAvailability(
-          localHeroExists,
-          localImageCount,
-          localVideoCount,
-          localSongExists,
-          !!backendMedia.heroUrl,
-          backendMedia.imageUrls.size,
-          backendMedia.videoUrls.size,
-          !!backendMedia.songUrl
-        );
-
-        console.log('Media Store Initialized:', {
-          local: availability.local,
-          backend: availability.backend,
-          merged: {
-            hero: !!newHeroUrl,
-            images: newImageUrls.size,
-            videos: newVideoUrls.size,
-            song: !!newSongUrl,
+        const diagnostic: AppStartDiagnostic = {
+          renderSource: 'Backend committed media',
+          committed: {
+            hero: !!committedHeroUrl,
+            images: committedImageUrls.size,
+            videos: committedVideoUrls.size,
+            song: !!committedSongUrl,
           },
-        });
+          imageOrder: {
+            length: imageOrder.length,
+            firstFive: imageOrder.slice(0, 5),
+          },
+          transforms: {
+            count: imageTransforms.size,
+            slots: Array.from(imageTransforms.keys()).slice(0, 10),
+          },
+        };
 
+        logAppStartDiagnostic(diagnostic);
         diagnosticLoggedRef.current = true;
       }
     } catch (error) {
@@ -219,55 +144,33 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   }
 
   async function refreshFromBackend() {
-    if (!actor) return;
+    if (!actor) {
+      console.error('Cannot refresh from backend: actor not available');
+      return;
+    }
     
     try {
       const backendMedia = await fetchPublishedMedia(actor);
       
-      // Clean up old blob URLs before replacing with backend URLs
-      if (heroBackgroundUrl && blobUrlsRef.current.has(heroBackgroundUrl)) {
-        URL.revokeObjectURL(heroBackgroundUrl);
-        blobUrlsRef.current.delete(heroBackgroundUrl);
-      }
-      imageUrls.forEach((url) => {
-        if (blobUrlsRef.current.has(url)) {
-          URL.revokeObjectURL(url);
-          blobUrlsRef.current.delete(url);
-        }
-      });
-      videoUrls.forEach((url) => {
-        if (blobUrlsRef.current.has(url)) {
-          URL.revokeObjectURL(url);
-          blobUrlsRef.current.delete(url);
-        }
-      });
-      if (songUrl && blobUrlsRef.current.has(songUrl)) {
-        URL.revokeObjectURL(songUrl);
-        blobUrlsRef.current.delete(songUrl);
-      }
-
-      // Update state with backend URLs
+      // Replace entire committed set deterministically
       setHeroBackgroundUrl(backendMedia.heroUrl);
       setImageUrls(backendMedia.imageUrls);
       setVideoUrls(backendMedia.videoUrls);
       setSongUrl(backendMedia.songUrl);
+      
+      setBackendFetchError(null);
     } catch (error) {
       console.error('Failed to refresh from backend:', error);
+      setBackendFetchError(String(error));
+      // Keep current state unchanged on error
     }
   }
 
   async function uploadHeroBackground(file: File) {
     try {
       await saveMedia('hero', 0, file);
-      setHeroBackgroundUrl((prev) => {
-        if (prev && blobUrlsRef.current.has(prev)) {
-          URL.revokeObjectURL(prev);
-          blobUrlsRef.current.delete(prev);
-        }
-        const newUrl = URL.createObjectURL(file);
-        blobUrlsRef.current.add(newUrl);
-        return newUrl;
-      });
+      const newUrl = URL.createObjectURL(file);
+      setHeroBackgroundUrl(newUrl);
     } catch (error) {
       console.error('Failed to upload hero background:', error);
       throw error;
@@ -287,16 +190,8 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
         for (let i = 0; i < Math.min(files.length, 43); i++) {
           if (!files[i]) continue;
           const slotIndex = i + 1;
-          
-          const oldUrl = newImageUrls.get(slotIndex);
-          if (oldUrl && blobUrlsRef.current.has(oldUrl)) {
-            URL.revokeObjectURL(oldUrl);
-            blobUrlsRef.current.delete(oldUrl);
-          }
-          
           const newUrl = URL.createObjectURL(files[i]);
           newImageUrls.set(slotIndex, newUrl);
-          blobUrlsRef.current.add(newUrl);
         }
         return newImageUrls;
       });
@@ -319,16 +214,8 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
         for (let i = 0; i < Math.min(files.length, 6); i++) {
           if (!files[i]) continue;
           const slotIndex = i + 1;
-          
-          const oldUrl = newVideoUrls.get(slotIndex);
-          if (oldUrl && blobUrlsRef.current.has(oldUrl)) {
-            URL.revokeObjectURL(oldUrl);
-            blobUrlsRef.current.delete(oldUrl);
-          }
-          
           const newUrl = URL.createObjectURL(files[i]);
           newVideoUrls.set(slotIndex, newUrl);
-          blobUrlsRef.current.add(newUrl);
         }
         return newVideoUrls;
       });
@@ -341,19 +228,10 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function uploadSingleImage(slotIndex: number, file: File) {
     try {
       await saveMedia('image', slotIndex, file);
-
+      const newUrl = URL.createObjectURL(file);
       setImageUrls((prevUrls) => {
         const newImageUrls = new Map(prevUrls);
-        
-        const oldUrl = newImageUrls.get(slotIndex);
-        if (oldUrl && blobUrlsRef.current.has(oldUrl)) {
-          URL.revokeObjectURL(oldUrl);
-          blobUrlsRef.current.delete(oldUrl);
-        }
-        
-        const newUrl = URL.createObjectURL(file);
         newImageUrls.set(slotIndex, newUrl);
-        blobUrlsRef.current.add(newUrl);
         return newImageUrls;
       });
     } catch (error) {
@@ -365,19 +243,10 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function uploadSingleVideo(slotIndex: number, file: File) {
     try {
       await saveMedia('video', slotIndex, file);
-
+      const newUrl = URL.createObjectURL(file);
       setVideoUrls((prevUrls) => {
         const newVideoUrls = new Map(prevUrls);
-        
-        const oldUrl = newVideoUrls.get(slotIndex);
-        if (oldUrl && blobUrlsRef.current.has(oldUrl)) {
-          URL.revokeObjectURL(oldUrl);
-          blobUrlsRef.current.delete(oldUrl);
-        }
-        
-        const newUrl = URL.createObjectURL(file);
         newVideoUrls.set(slotIndex, newUrl);
-        blobUrlsRef.current.add(newUrl);
         return newVideoUrls;
       });
     } catch (error) {
@@ -389,15 +258,8 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function uploadSong(file: File) {
     try {
       await saveMedia('song', 0, file);
-      setSongUrl((prev) => {
-        if (prev && blobUrlsRef.current.has(prev)) {
-          URL.revokeObjectURL(prev);
-          blobUrlsRef.current.delete(prev);
-        }
-        const newUrl = URL.createObjectURL(file);
-        blobUrlsRef.current.add(newUrl);
-        return newUrl;
-      });
+      const newUrl = URL.createObjectURL(file);
+      setSongUrl(newUrl);
     } catch (error) {
       console.error('Failed to upload song:', error);
       throw error;
@@ -407,13 +269,7 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function clearHeroBackground() {
     try {
       await clearAllMediaOfType('hero');
-      setHeroBackgroundUrl((prev) => {
-        if (prev && blobUrlsRef.current.has(prev)) {
-          URL.revokeObjectURL(prev);
-          blobUrlsRef.current.delete(prev);
-        }
-        return null;
-      });
+      setHeroBackgroundUrl(null);
     } catch (error) {
       console.error('Failed to clear hero background:', error);
       throw error;
@@ -423,15 +279,7 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function clearAllImages() {
     try {
       await clearAllMediaOfType('image');
-      setImageUrls((prevUrls) => {
-        prevUrls.forEach((url) => {
-          if (blobUrlsRef.current.has(url)) {
-            URL.revokeObjectURL(url);
-            blobUrlsRef.current.delete(url);
-          }
-        });
-        return new Map();
-      });
+      setImageUrls(new Map());
     } catch (error) {
       console.error('Failed to clear images:', error);
       throw error;
@@ -441,15 +289,7 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function clearAllVideos() {
     try {
       await clearAllMediaOfType('video');
-      setVideoUrls((prevUrls) => {
-        prevUrls.forEach((url) => {
-          if (blobUrlsRef.current.has(url)) {
-            URL.revokeObjectURL(url);
-            blobUrlsRef.current.delete(url);
-          }
-        });
-        return new Map();
-      });
+      setVideoUrls(new Map());
     } catch (error) {
       console.error('Failed to clear videos:', error);
       throw error;
@@ -461,11 +301,6 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
       await clearMedia('image', slotIndex);
       setImageUrls((prevUrls) => {
         const newImageUrls = new Map(prevUrls);
-        const url = newImageUrls.get(slotIndex);
-        if (url && blobUrlsRef.current.has(url)) {
-          URL.revokeObjectURL(url);
-          blobUrlsRef.current.delete(url);
-        }
         newImageUrls.delete(slotIndex);
         return newImageUrls;
       });
@@ -480,11 +315,6 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
       await clearMedia('video', slotIndex);
       setVideoUrls((prevUrls) => {
         const newVideoUrls = new Map(prevUrls);
-        const url = newVideoUrls.get(slotIndex);
-        if (url && blobUrlsRef.current.has(url)) {
-          URL.revokeObjectURL(url);
-          blobUrlsRef.current.delete(url);
-        }
         newVideoUrls.delete(slotIndex);
         return newVideoUrls;
       });
@@ -497,13 +327,7 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
   async function clearSong() {
     try {
       await clearAllMediaOfType('song');
-      setSongUrl((prev) => {
-        if (prev && blobUrlsRef.current.has(prev)) {
-          URL.revokeObjectURL(prev);
-          blobUrlsRef.current.delete(prev);
-        }
-        return null;
-      });
+      setSongUrl(null);
     } catch (error) {
       console.error('Failed to clear song:', error);
       throw error;

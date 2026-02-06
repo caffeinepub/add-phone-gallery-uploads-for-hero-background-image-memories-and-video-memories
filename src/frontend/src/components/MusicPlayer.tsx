@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2 } from 'lucide-react';
+import { Play, Pause, Volume2, Music } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
 
 export default function MusicPlayer() {
@@ -7,9 +7,6 @@ export default function MusicPlayer() {
   const [showTapPrompt, setShowTapPrompt] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { songUrl } = useMediaStore();
-
-  // Use uploaded song if available, otherwise fallback to default
-  const audioSrc = songUrl || '/song.mp3';
 
   // Detect file type from URL or default to audio/mpeg
   const getAudioType = (url: string): string => {
@@ -26,7 +23,7 @@ export default function MusicPlayer() {
   useEffect(() => {
     // Attempt autoplay muted on mount (mobile-compatible)
     const audio = audioRef.current;
-    if (audio) {
+    if (audio && songUrl) {
       audio.volume = 0.3;
       audio.muted = true;
       
@@ -48,12 +45,12 @@ export default function MusicPlayer() {
           });
       }
     }
-  }, []);
+  }, [songUrl]);
 
   // Reload audio when song changes
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio) {
+    if (audio && songUrl) {
       const wasPlaying = isPlaying;
       audio.load();
       if (wasPlaying) {
@@ -69,11 +66,11 @@ export default function MusicPlayer() {
           });
       }
     }
-  }, [audioSrc]);
+  }, [songUrl]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !songUrl) return;
 
     if (isPlaying) {
       audio.pause();
@@ -90,6 +87,18 @@ export default function MusicPlayer() {
         });
     }
   };
+
+  // If no song uploaded, show disabled state
+  if (!songUrl) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="flex items-center gap-2 px-4 py-3 bg-rose-100 text-rose-400 rounded-full shadow-lg border-2 border-rose-200">
+          <Music className="w-5 h-5" />
+          <span className="text-xs font-medium">No song uploaded</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -117,7 +126,7 @@ export default function MusicPlayer() {
         loop
         preload="auto"
       >
-        <source src={audioSrc} type={getAudioType(audioSrc)} />
+        <source src={songUrl} type={getAudioType(songUrl)} />
       </audio>
     </div>
   );

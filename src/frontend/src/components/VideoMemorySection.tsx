@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
-import { videoMemoryData } from '../config/videoMemory';
+import { Volume2, VolumeX, Video } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
-import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 
@@ -40,27 +38,37 @@ export default function VideoMemorySection() {
 
         {/* Video Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {videoMemoryData.map((item) => {
-            // Use uploaded video if available, otherwise fallback to placeholder
-            const videoSrc = videoUrls.get(item.id) || item.videoSrc;
+          {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => {
+            const videoUrl = videoUrls.get(slotIndex);
             
+            if (!videoUrl) {
+              // Empty state for missing slot
+              return (
+                <div
+                  key={slotIndex}
+                  className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-rose-100 border-2 border-rose-200 flex items-center justify-center"
+                >
+                  <div className="text-center text-rose-300">
+                    <Video className="w-12 h-12 mx-auto mb-2" />
+                    <p className="text-sm">No video uploaded for slot {slotIndex}</p>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
-                key={item.id}
+                key={slotIndex}
                 className="relative aspect-[9/16] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 bg-rose-100"
               >
                 <video
-                  src={videoSrc}
+                  src={videoUrl}
                   loop
                   muted={isMuted}
                   playsInline
                   controls
+                  preload="auto"
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback for missing videos
-                    const target = e.target as HTMLVideoElement;
-                    target.poster = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="711"%3E%3Crect fill="%23fecdd3" width="400" height="711"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="48" fill="%23be123c"%3E🎥%3C/text%3E%3C/svg%3E';
-                  }}
                 />
               </div>
             );

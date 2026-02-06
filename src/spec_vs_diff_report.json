@@ -1,59 +1,69 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-06T02:10:52.146Z",
-  "summary": "Diff implements Hero button label change to “Media”, adds/changes hero background rendering from MediaStore, enhances MusicPlayer autoplay/tap-to-start behavior, and begins adding draft preview URL management in MediaManager; MediaStoreContext changes suggest new local/backend loading logic but are truncated, so full preview/live fallback and clear/publish behaviors can’t be fully verified.",
+  "generatedAt": "2026-02-06T03:12:34.537Z",
+  "summary": "Diff adds a backend `publishedMedia` structure and multiple frontend changes to render only committed uploaded media with explicit empty states, eager loading, and new media diagnostics utilities. However, upgrade persistence for published media and evidence of deterministic decoding/log emission are not fully demonstrated in the provided truncated diff, and some unrelated romantic content/UI text appears to have been changed.",
   "missing_requirements": [
     {
-      "id": "REQ-42",
-      "requirement": "Ensure uploaded/published media is visible in both preview and live/production modes with correct fallback to backend-published media when local IndexedDB media is absent (Hero, all image/video slots, and song).",
-      "reason": "MediaStoreContext changes related to loading local vs published media are truncated; the diff summary does not provide complete evidence that backend-published media is fetched on fresh load with empty storage, that live/production renders without refresh, and that cleared published slots reliably fall back to placeholders (no broken blanks).",
+      "id": "REQ-53",
+      "requirement": "The committed media set survives canister upgrades/deployments that do not intentionally wipe state (no unexpected resets).",
+      "reason": "`publishedMedia` is introduced as a normal `var` in `backend/main.mo` but there is no evidence it is stored in `stable` variables and no `backend/migration.mo` is added/shown to migrate or preserve state across upgrades.",
       "evidence": [
-        "frontend/src/context/MediaStoreContext.tsx (truncated)",
-        "frontend-file-summaries.txt (only describes behavior; not full code evidence)"
+        "backend/main.mo"
       ]
     },
     {
-      "id": "REQ-43",
-      "requirement": "Add an explicit, user-friendly pre-publish preview inside Media Manager labeled in English (e.g., “Preview”) showing draft Hero, draft images (ordered, transforms applied), draft videos, and draft song audio preview; it must update immediately on staged changes and show placeholders for staged clears.",
-      "reason": "MediaManager shows added state for draft preview URLs, but the diff is truncated before any UI section labeled “Preview” (and before evidence of image/video grids with order/transforms and an audio preview element wired to draft song). Immediate placeholder behavior for staged clears is also not verifiable from the truncated excerpt.",
+      "id": "REQ-56",
+      "requirement": "Frontend decoding/mapping of `getPublishedMedia()` must be deterministic and identical across Preview and Published, including consistent interpretation of optionals/tuples and slot indexing, and must not silently drop media due to decode/mapping issues.",
+      "reason": "The diff shows `PublishedMedia` contains arrays of optionals/tuples (`[?(Text, Storage.ExternalBlob)]`), and the frontend now calls `fetchPublishedMedia(actor)`, but the implementation of `fetchPublishedMedia` / mapping logic is not included in the provided diff summary, so deterministic decoding and correct slot-index mapping cannot be verified from evidence shown.",
       "evidence": [
-        "frontend/src/components/MediaManager.tsx (truncated)"
+        "backend/main.mo",
+        "frontend/src/context/MediaStoreContext.tsx"
       ]
     },
     {
-      "id": "REQ-46",
-      "requirement": "Ensure clear actions are understandable and reliably remove media references so UI falls back to placeholders in preview and live views after Submit and persists after reload.",
-      "reason": "The diff excerpt does not show the clear-action UI/handlers end-to-end (draft clear -> preview placeholder immediately; submit -> live UI updates immediately without refresh; reload persists cleared state). This may exist in truncated portions, but it is not provable from the provided diff summary.",
+      "id": "REQ-57",
+      "requirement": "Emit exactly one structured, English-only diagnostic console log on app start and exactly one on every successful Submit confirming committed media state (counts + image order + transform counts), identical in shape across Draft/Preview/Published.",
+      "reason": "A diagnostics utility is added and imported in `MediaStoreContext` and `usePublishWithPrecheck`, but the provided diff excerpts do not show the actual call sites that guarantee (a) app-start log is emitted exactly once and (b) submit-success log is emitted exactly once per successful submit, with the required payload shape and fields (including image order + transform counts).",
       "evidence": [
-        "frontend/src/components/MediaManager.tsx (truncated)",
-        "frontend/src/context/MediaStoreContext.tsx (truncated)"
+        "frontend/src/lib/mediaDiagnostics.ts",
+        "frontend/src/context/MediaStoreContext.tsx",
+        "frontend/src/hooks/usePublishWithPrecheck.ts"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Changed/added extensive non-requested HeroSection user-facing copy (including many emojis and non-English/vernacular terms) and decorative bouncing emoji elements.",
-      "reason": "BuildRequest focuses on media preview/live rendering, audio playback reliability, and renaming the Hero media button label. Large changes to displayed hero text/content are not requested and also appear to conflict with the constraint that all user-facing text must be in English.",
+      "description": "Changed/introduced romantic experience content and non-English/emoji-heavy user-facing text in the hero section (content unrelated to media rendering consistency).",
+      "reason": "BuildRequest explicitly lists as a non-goal: do not change romantic experience content/features unrelated to media rendering consistency, and also constrains user-facing text to English. The diff shows extensive hero headline/body text changes with non-English/emoji-heavy wording not tied to media rendering rules.",
       "evidence": [
         "frontend/src/components/HeroSection.tsx"
       ]
     },
     {
-      "description": "Tap-to-start prompt includes an emoji (“Tap to start music 🎵”).",
-      "reason": "REQ-44 requests an English call-to-action; adding an emoji is not requested and may conflict with strict “all user-facing text must be in English” constraint depending on interpretation.",
+      "description": "Added new public documentation file about placeholders/uploaded-only behavior.",
+      "reason": "A new `frontend/public/PLACEHOLDER_MEDIA_README.txt` is added; this was not requested as a requirement and is not necessary to satisfy the media-rendering consistency requirements.",
       "evidence": [
-        "frontend/src/components/MusicPlayer.tsx"
+        "frontend/public/PLACEHOLDER_MEDIA_README.txt"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.66,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
+    "frontend/public/PLACEHOLDER_MEDIA_README.txt",
+    "frontend/src/components/FlipImageCard.tsx",
     "frontend/src/components/HeroSection.tsx",
+    "frontend/src/components/ImageMemorySection.tsx",
     "frontend/src/components/MediaManager.tsx",
     "frontend/src/components/MusicPlayer.tsx",
+    "frontend/src/components/VideoMemorySection.tsx",
+    "frontend/src/config/imageMemory.ts",
+    "frontend/src/config/videoMemory.ts",
     "frontend/src/context/MediaStoreContext.tsx",
+    "frontend/src/hooks/usePublishWithPrecheck.ts",
+    "frontend/src/lib/mediaDiagnostics.ts",
     "project_state.json"
   ]
 }

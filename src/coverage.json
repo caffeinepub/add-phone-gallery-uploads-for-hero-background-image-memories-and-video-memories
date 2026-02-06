@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-06T02:10:52.151Z",
+  "generatedAt": "2026-02-06T03:12:34.542Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -11,81 +11,106 @@
     "implemented": 5,
     "items": [
       {
-        "id": "REQ-42",
-        "summary": "Ensure uploaded/published media is visible in both the app's preview experience and the live/production experience: Hero background, all Image Memory slots, all Video Memory slots, and the background song must render using the current MediaStore state and must correctly fall back to backend-published media when local IndexedDB media is absent.",
+        "id": "REQ-53",
+        "summary": "Unify media source-of-truth so that the same committed media set (hero background, 43 image slots, 6 video slots, and background song) is what renders in Draft, Preview, and Published modes (Draft = Preview = Published). After a successful Media Manager Submit, the app must render from the committed set and must not show any older placeholders or regenerated/static assets for those slots.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/context/MediaStoreContext.tsx",
-          "frontend/src/lib/publishedMediaClient.ts",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/context/MediaStoreContext.tsx"
+        ]
+      },
+      {
+        "id": "REQ-54",
+        "summary": "Add a strict \"uploaded-only\" rendering rule for all modes: for hero background, each image slot, each video slot, and the background song, render the user’s committed uploaded media if present; if not present, render an explicit empty state (no placeholder assets, no default packaged media, no regeneration). This rule must apply consistently in Draft, Preview, and Published.",
+        "status": "implemented",
+        "plannedFiles": [
           "frontend/src/components/HeroSection.tsx",
           "frontend/src/components/ImageMemorySection.tsx",
-          "frontend/src/components/VideoMemorySection.tsx"
+          "frontend/src/components/VideoMemorySection.tsx",
+          "frontend/src/components/MusicPlayer.tsx",
+          "frontend/src/components/MediaManager.tsx",
+          "frontend/src/config/imageMemory.ts",
+          "frontend/src/config/videoMemory.ts",
+          "frontend/public/PLACEHOLDER_MEDIA_README.txt"
         ],
         "matchedFiles": [
+          "frontend/src/components/HeroSection.tsx",
+          "frontend/src/components/ImageMemorySection.tsx",
+          "frontend/src/components/VideoMemorySection.tsx",
+          "frontend/src/components/MusicPlayer.tsx",
+          "frontend/src/components/MediaManager.tsx",
+          "frontend/src/config/imageMemory.ts",
+          "frontend/src/config/videoMemory.ts",
+          "frontend/public/PLACEHOLDER_MEDIA_README.txt"
+        ]
+      },
+      {
+        "id": "REQ-55",
+        "summary": "Remove/disable any media lazy-loading or visibility gating that can cause committed uploaded media to appear missing (e.g., `loading=\"lazy\"` on committed images, deferred video source assignment that never triggers, conditional rendering that hides media until interaction). Committed uploaded media must be eagerly attached to the DOM and begin loading immediately on initial render across Draft, Preview, and Published.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/HeroSection.tsx",
+          "frontend/src/components/FlipImageCard.tsx",
+          "frontend/src/components/VideoMemorySection.tsx",
+          "frontend/src/components/MusicPlayer.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/HeroSection.tsx",
+          "frontend/src/components/FlipImageCard.tsx",
+          "frontend/src/components/VideoMemorySection.tsx",
+          "frontend/src/components/MusicPlayer.tsx"
+        ]
+      },
+      {
+        "id": "REQ-56",
+        "summary": "Make backend-published media retrieval and frontend decoding/rendering deterministic and identical across Preview and Published builds: the frontend must always interpret the Motoko `getPublishedMedia()` response consistently (including optionals/tuples and slot indexing), producing stable, renderable URLs for every committed slot and never silently dropping media due to decode/mapping issues.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/publishedMediaClient.ts",
+          "frontend/src/context/MediaStoreContext.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/context/MediaStoreContext.tsx"
+        ]
+      },
+      {
+        "id": "REQ-57",
+        "summary": "Add one structured, English-only diagnostic console log on app start and one on every successful Submit that confirms the exact committed media state used for rendering across modes (counts for hero/images/videos/song, plus image order + transform counts). This diagnostics output must be identical in shape across Draft, Preview, and Published to aid verification that Draft = Preview = Published.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/mediaDiagnostics.ts",
           "frontend/src/context/MediaStoreContext.tsx",
-          "frontend/src/components/HeroSection.tsx"
-        ]
-      },
-      {
-        "id": "REQ-43",
-        "summary": "Add an explicit, user-friendly pre-publish preview inside the Media Manager that lets the user confirm what they uploaded for Hero, Images, Videos, and Song before publishing, and make sure the preview uses the staged draft values (not only the currently published/live values).",
-        "status": "implemented",
-        "plannedFiles": [
           "frontend/src/components/MediaManager.tsx"
         ],
         "matchedFiles": [
+          "frontend/src/lib/mediaDiagnostics.ts",
+          "frontend/src/context/MediaStoreContext.tsx",
           "frontend/src/components/MediaManager.tsx"
-        ]
-      },
-      {
-        "id": "REQ-44",
-        "summary": "Fix background audio playback so the user can reliably hear the song in both preview and live/production modes, including when the user uploads a custom song; ensure playback works across common mobile browsers where autoplay may be blocked.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/MusicPlayer.tsx",
-          "frontend/src/components/MediaManager.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/MusicPlayer.tsx",
-          "frontend/src/components/MediaManager.tsx"
-        ]
-      },
-      {
-        "id": "REQ-45",
-        "summary": "Update the Hero section Media entry-point button to remove the confusing \"Edit\" label and show a clear, consistent label in English on all screen sizes (keep the icon).",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/HeroSection.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/HeroSection.tsx"
-        ]
-      },
-      {
-        "id": "REQ-46",
-        "summary": "Ensure 'clear' actions are easy to understand and reliably remove media references so the UI falls back to placeholders (Hero, individual image slots, individual video slots, and song) in both preview and live views after Submit.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/MediaManager.tsx",
-          "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "frontend/src/context/MediaStoreContext.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/MediaManager.tsx",
-          "frontend/src/context/MediaStoreContext.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/public/PLACEHOLDER_MEDIA_README.txt",
+    "frontend/src/components/FlipImageCard.tsx",
     "frontend/src/components/HeroSection.tsx",
+    "frontend/src/components/ImageMemorySection.tsx",
     "frontend/src/components/MediaManager.tsx",
     "frontend/src/components/MusicPlayer.tsx",
+    "frontend/src/components/VideoMemorySection.tsx",
+    "frontend/src/config/imageMemory.ts",
+    "frontend/src/config/videoMemory.ts",
     "frontend/src/context/MediaStoreContext.tsx",
+    "frontend/src/hooks/usePublishWithPrecheck.ts",
+    "frontend/src/lib/mediaDiagnostics.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",
