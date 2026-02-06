@@ -6,13 +6,17 @@ import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
+import Migration "migration";
 
 // Migrate persistent data when redeploying the canister through `dfx deploy`
-
+(with migration = Migration.run)
 actor {
   // Authorization
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
+
+  // Image Uploader Allowlist (persisted)
+  var imageUploaderAllowlist : [Principal] = [];
 
   // User Management
   public type UserProfile = {
@@ -21,27 +25,6 @@ actor {
   };
 
   let userProfiles = Map.empty<Principal, UserProfile>();
-
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    userProfiles.get(caller);
-  };
-
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
-    userProfiles.get(user);
-  };
-
-  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    userProfiles.add(caller, profile);
-  };
 
   // Media Management
   type FileType = {
@@ -59,7 +42,6 @@ actor {
     #backgroundSong;
   };
 
-  // Persistent published media
   public type PublishedMedia = {
     heroBackground : ?Storage.ExternalBlob;
     images : [?(Text, Storage.ExternalBlob)];
@@ -75,125 +57,6 @@ actor {
   };
 
   include MixinStorage();
-
-  public query ({ caller }) func getPublishedMedia() : async PublishedMedia {
-    publishedMedia;
-  };
-
-  // APIs to publish media per type/slot
-  public shared ({ caller }) func setHeroBackground(blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish media");
-    };
-    publishedMedia := { publishedMedia with heroBackground = ?blob };
-  };
-
-  public shared ({ caller }) func setImage(index : Nat, name : Text, blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish media");
-    };
-    if (index >= 43) {
-      Runtime.trap("Invalid image index");
-    };
-    let updatedImages = Array.tabulate(
-      43,
-      func(i) {
-        if (i == index) {
-          ?(name, blob);
-        } else {
-          publishedMedia.images[i];
-        };
-      },
-    );
-    publishedMedia := { publishedMedia with images = updatedImages };
-  };
-
-  public shared ({ caller }) func setVideo(index : Nat, name : Text, blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish media");
-    };
-    if (index >= 6) {
-      Runtime.trap("Invalid video index");
-    };
-    let updatedVideos = Array.tabulate(
-      6,
-      func(i) {
-        if (i == index) {
-          ?(name, blob);
-        } else {
-          publishedMedia.videos[i];
-        };
-      },
-    );
-    publishedMedia := { publishedMedia with videos = updatedVideos };
-  };
-
-  public shared ({ caller }) func setBackgroundSong(blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish media");
-    };
-    publishedMedia := { publishedMedia with backgroundSong = ?blob };
-  };
-
-  // API to clear published fields per type/slot
-  public shared ({ caller }) func clearHeroBackground() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear media");
-    };
-    publishedMedia := { publishedMedia with heroBackground = null };
-  };
-
-  public shared ({ caller }) func clearImage(index : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear media");
-    };
-    if (index >= 43) {
-      Runtime.trap("Invalid image index");
-    };
-    let updatedImages = Array.tabulate(
-      43,
-      func(i) {
-        if (i == index) { null } else { publishedMedia.images[i] };
-      },
-    );
-    publishedMedia := { publishedMedia with images = updatedImages };
-  };
-
-  public shared ({ caller }) func clearVideo(index : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear media");
-    };
-    if (index >= 6) {
-      Runtime.trap("Invalid video index");
-    };
-    let updatedVideos = Array.tabulate(
-      6,
-      func(i) {
-        if (i == index) { null } else { publishedMedia.videos[i] };
-      },
-    );
-    publishedMedia := { publishedMedia with videos = updatedVideos };
-  };
-
-  public shared ({ caller }) func clearBackgroundSong() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear media");
-    };
-    publishedMedia := { publishedMedia with backgroundSong = null };
-  };
-
-  // API to clear all published media
-  public shared ({ caller }) func clearAllPublishedMedia() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear media");
-    };
-    publishedMedia := {
-      heroBackground = null;
-      images = Array.tabulate<?(Text, Storage.ExternalBlob)>(43, func(_) { null });
-      videos = Array.tabulate<?(Text, Storage.ExternalBlob)>(6, func(_) { null });
-      backgroundSong = null;
-    };
-  };
 
   // Deployment
   public type DeploymentStatus = {
@@ -230,6 +93,172 @@ actor {
   let publishedVersions = Map.empty<Text, VersionInfo>();
   var currentVersion : ?VersionInfo = null;
 
+  // Image Uploader Access Control
+  public query ({ caller }) func getImageUploaderAllowlist() : async [Principal] {
+    imageUploaderAllowlist;
+  };
+
+  public shared ({ caller }) func grantImageUploaderAccess(user : Principal) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can manage access");
+    };
+    if (not imageUploaderAllowlist.any(func(p) { p == user })) {
+      imageUploaderAllowlist := imageUploaderAllowlist.concat([user]);
+    };
+  };
+
+  public shared ({ caller }) func revokeImageUploaderAccess(user : Principal) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can manage access");
+    };
+    imageUploaderAllowlist := imageUploaderAllowlist.filter(func(p) { p != user });
+  };
+
+  public query ({ caller }) func hasImageUploaderAccess(user : Principal) : async Bool {
+    imageUploaderAllowlist.any(func(p) { p == user });
+  };
+
+  // User Management APIs
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    userProfiles.add(caller, profile);
+  };
+
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    userProfiles.get(caller);
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    userProfiles.get(user);
+  };
+
+  // Media Publishing APIs with updated authorization
+  public query ({ caller }) func getPublishedMedia() : async PublishedMedia {
+    publishedMedia;
+  };
+
+  // Hero background (admin only)
+  public shared ({ caller }) func setHeroBackground(blob : Storage.ExternalBlob) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can publish hero background");
+    };
+    publishedMedia := { publishedMedia with heroBackground = ?blob };
+  };
+
+  // Images (now public, removed allowlist check)
+  public shared ({ caller }) func setImage(index : Nat, name : Text, blob : Storage.ExternalBlob) : async () {
+    if (index >= 43) {
+      Runtime.trap("Invalid image index");
+    };
+    let updatedImages = Array.tabulate(
+      43,
+      func(i) {
+        if (i == index) {
+          ?(name, blob);
+        } else {
+          publishedMedia.images[i];
+        };
+      },
+    );
+    publishedMedia := { publishedMedia with images = updatedImages };
+  };
+
+  // Video (admin only)
+  public shared ({ caller }) func setVideo(index : Nat, name : Text, blob : Storage.ExternalBlob) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can publish videos");
+    };
+    if (index >= 6) {
+      Runtime.trap("Invalid video index");
+    };
+    let updatedVideos = Array.tabulate(
+      6,
+      func(i) {
+        if (i == index) {
+          ?(name, blob);
+        } else {
+          publishedMedia.videos[i];
+        };
+      },
+    );
+    publishedMedia := { publishedMedia with videos = updatedVideos };
+  };
+
+  // Background song (admin only)
+  public shared ({ caller }) func setBackgroundSong(blob : Storage.ExternalBlob) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can publish background song");
+    };
+    publishedMedia := { publishedMedia with backgroundSong = ?blob };
+  };
+
+  // Media clearing APIs (same permissions as publishing)
+  public shared ({ caller }) func clearHeroBackground() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear hero background");
+    };
+    publishedMedia := { publishedMedia with heroBackground = null };
+  };
+
+  // Images (now public, removed allowlist check)
+  public shared ({ caller }) func clearImage(index : Nat) : async () {
+    if (index >= 43) {
+      Runtime.trap("Invalid image index");
+    };
+    let updatedImages = Array.tabulate(
+      43,
+      func(i) {
+        if (i == index) { null } else { publishedMedia.images[i] };
+      },
+    );
+    publishedMedia := { publishedMedia with images = updatedImages };
+  };
+
+  public shared ({ caller }) func clearVideo(index : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear videos");
+    };
+    if (index >= 6) {
+      Runtime.trap("Invalid video index");
+    };
+    let updatedVideos = Array.tabulate(
+      6,
+      func(i) {
+        if (i == index) { null } else { publishedMedia.videos[i] };
+      },
+    );
+    publishedMedia := { publishedMedia with videos = updatedVideos };
+  };
+
+  public shared ({ caller }) func clearBackgroundSong() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear background song");
+    };
+    publishedMedia := { publishedMedia with backgroundSong = null };
+  };
+
+  // Utilities
+  public shared ({ caller }) func clearAllPublishedMedia() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear all media");
+    };
+    publishedMedia := {
+      heroBackground = null;
+      images = Array.tabulate<?(Text, Storage.ExternalBlob)>(43, func(_) { null });
+      videos = Array.tabulate<?(Text, Storage.ExternalBlob)>(6, func(_) { null });
+      backgroundSong = null;
+    };
+  };
+
+  // Deployment Management APIs
   public shared ({ caller }) func recordDeployment(version : Text, status : DeploymentStatus) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can record deployments");
@@ -251,7 +280,6 @@ actor {
     publishedVersions.get(version);
   };
 
-  // Prepublish check (static error messages only)
   public shared ({ caller }) func prePublishCheck(config : PrePublishConfig) : async PrePublishResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can perform pre-publish checks");
@@ -285,4 +313,3 @@ actor {
     publishedVersions.toArray();
   };
 };
-

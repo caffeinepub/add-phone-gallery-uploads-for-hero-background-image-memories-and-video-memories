@@ -1,112 +1,73 @@
 {
   "kind": "build_request",
-  "title": "Make Draft, Preview, and Published render identical uploaded media only (no placeholders/resets/lazy hiding)",
-  "priority": "high",
+  "title": "Allow anyone to upload Image Memories using phone gallery or Google Drive picker",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-53",
-      "text": "Unify media source-of-truth so that the same committed media set (hero background, 43 image slots, 6 video slots, and background song) is what renders in Draft, Preview, and Published modes (Draft = Preview = Published). After a successful Media Manager Submit, the app must render from the committed set and must not show any older placeholders or regenerated/static assets for those slots.",
-      "target": "both",
+      "id": "REQ-62",
+      "text": "Update backend image publishing/clearing authorization so that ANY caller (including non-admin users) can publish and clear Image Memory slots (images index 0–42 / UI slots 1–43), without requiring the image-uploader allowlist. Keep Hero background, Video Memory slots, and Background Song admin-only.",
+      "target": "backend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "“Force all images, videos, hero background, and background music uploaded in Draft to be persistently bound and rendered identically in Preview and Published modes (Draft = Preview = Publish), with no placeholders, no regeneration, no asset reset, no lazy loading, and no media hiding—display only my uploaded content exactly as shown in Draft.”"
+          "Give the access to anyone that they can add their images in this website through their phone gallery or Google drive"
         ]
       },
       "acceptanceCriteria": [
-        "After clicking Submit in the Media Manager, navigating between Draft, Preview, and Published shows the exact same hero background, image grid content/order, video grid content, and background song without requiring a refresh.",
-        "On a fresh session where no local IndexedDB media exists, Preview and Published load the committed media from the backend and render it correctly (hero, all committed image slots, all committed video slots, song).",
-        "No slot that has committed uploaded media ever falls back to a static placeholder path in any mode.",
-        "The committed media set survives canister upgrades/deployments that do not intentionally wipe state (no unexpected resets)."
+        "A non-admin principal can successfully call setImage(index, name, blob) and clearImage(index) for valid indices 0–42.",
+        "If an image index is out of range (>= 43), the backend still rejects with an 'Invalid image index' error.",
+        "Non-admin principals are still blocked from setHeroBackground/clearHeroBackground, setVideo/clearVideo, and setBackgroundSong/clearBackgroundSong with clear authorization errors.",
+        "Existing allowlist management APIs (getImageUploaderAllowlist/grant/revoke/hasImageUploaderAccess) may remain, but they no longer restrict image publishing/clearing."
       ]
     },
     {
-      "id": "REQ-54",
-      "text": "Add a strict \"uploaded-only\" rendering rule for all modes: for hero background, each image slot, each video slot, and the background song, render the user’s committed uploaded media if present; if not present, render an explicit empty state (no placeholder assets, no default packaged media, no regeneration). This rule must apply consistently in Draft, Preview, and Published.",
+      "id": "REQ-63",
+      "text": "Update frontend Media Manager permissions logic so that the Images tab is editable for all visitors (anyone), while Hero/Videos/Song remain restricted to administrators. Ensure any user-facing permission/lock text is in English and matches the new behavior.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "with no placeholders, no regeneration, no asset reset ... display only my uploaded content exactly as shown in Draft."
+          "Give the access to anyone that they can add their images in this website through their phone gallery or Google drive"
         ]
       },
       "acceptanceCriteria": [
-        "When a slot has no committed uploaded media, the UI does not display any placeholder image/video/audio for that slot in Draft, Preview, or Published.",
-        "Empty states use clear English-only user-facing text (e.g., \"No image uploaded for this slot.\") and do not break layout.",
-        "When a slot does have committed uploaded media, that media is rendered (and not replaced by an empty state)."
+        "When not an admin, the Media Manager still shows lock messaging for Hero/Videos/Song, but the Images tab allows Upload/Replace/Adjust/Clear/Reorder and Submit.",
+        "The Images tab no longer shows 'Administrator or image uploader access required' for non-admin users.",
+        "The submit flow in non-admin mode publishes only image-related changes (no hero/video/song actions attempted), and errors (if any) are shown in English without closing the dialog."
       ]
     },
     {
-      "id": "REQ-55",
-      "text": "Remove/disable any media lazy-loading or visibility gating that can cause committed uploaded media to appear missing (e.g., `loading=\"lazy\"` on committed images, deferred video source assignment that never triggers, conditional rendering that hides media until interaction). Committed uploaded media must be eagerly attached to the DOM and begin loading immediately on initial render across Draft, Preview, and Published.",
+      "id": "REQ-64",
+      "text": "Update Media Manager UI copy to explicitly tell users they can choose images from their phone gallery or Google Drive via the device file picker (no separate Google Drive login).",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "no lazy loading, and no media hiding"
+          "through their phone gallery or Google drive"
         ]
       },
       "acceptanceCriteria": [
-        "Committed uploaded hero background image begins loading immediately on page load (no user scroll/interaction required).",
-        "Committed uploaded image memory thumbnails begin loading immediately on page load (no `loading=\"lazy\"` on committed images).",
-        "Committed uploaded video thumbnails/players attach their `src` immediately on initial render (no intersection/scroll gating).",
-        "If autoplay is blocked for audio/video, the UI still renders the correct committed media and shows an English-only affordance to start playback; it must not replace media with placeholders."
-      ]
-    },
-    {
-      "id": "REQ-56",
-      "text": "Make backend-published media retrieval and frontend decoding/rendering deterministic and identical across Preview and Published builds: the frontend must always interpret the Motoko `getPublishedMedia()` response consistently (including optionals/tuples and slot indexing), producing stable, renderable URLs for every committed slot and never silently dropping media due to decode/mapping issues.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "persistently bound and rendered identically in Preview and Published modes (Draft = Preview = Publish)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "For a known committed set containing: hero background + N images + M videos + song, Preview and Published both report the same decoded counts and render the same items.",
-        "No committed image/video/song is missing due to frontend mapping/slot-index mismatches between UI slots and backend storage.",
-        "If backend returns media for a slot, the frontend renders it; it must not fall back to placeholders or empty states for that slot.",
-        "If a backend fetch fails, the app shows a clear English-only error state without resetting already-visible committed media in the current session."
-      ]
-    },
-    {
-      "id": "REQ-57",
-      "text": "Add one structured, English-only diagnostic console log on app start and one on every successful Submit that confirms the exact committed media state used for rendering across modes (counts for hero/images/videos/song, plus image order + transform counts). This diagnostics output must be identical in shape across Draft, Preview, and Published to aid verification that Draft = Preview = Published.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "Force all images, videos, hero background, and background music ... rendered identically in Preview and Published modes"
-        ]
-      },
-      "acceptanceCriteria": [
-        "On app start, exactly one structured console log is emitted summarizing the render source used and counts of committed hero/images/videos/song available.",
-        "On Submit success, exactly one structured console log is emitted summarizing what was committed (uploaded/cleared counts, order changed yes/no, transforms changed yes/no).",
-        "All diagnostic strings are in English.",
-        "Diagnostics do not include any user media bytes or personal content—only counts/booleans/slot indices."
+        "Media Manager includes a short, clear English instruction near image uploading controls, e.g., indicating that the upload picker may offer 'Photos' or 'Google Drive' depending on the device.",
+        "No UI implies a Google Drive OAuth/login integration or requires connecting a Drive account inside the app."
       ]
     }
   ],
   "constraints": [
-    "Respect the single-actor backend architecture; keep all Motoko logic in backend/main.mo and create backend/migration.mo only if an upgrade requires state migration.",
-    "Do not modify any files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
-    "All user-facing text must be in English."
+    "Respect the single-actor Motoko backend architecture; keep logic changes in backend/main.mo.",
+    "Do not edit any frontend files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
+    "All user-facing text must be in English.",
+    "Do not add third-party authentication or Google Drive API/OAuth integration; rely on the device/system file picker for Drive selection."
   ],
   "nonGoals": [
-    "Do not add new third-party storage providers or external databases for media.",
-    "Do not introduce new authentication mechanisms beyond Internet Identity.",
-    "Do not change the romantic experience content/features unrelated to media rendering consistency."
+    "Adding a full Google Drive integration (OAuth, browsing Drive inside the app, Drive API calls).",
+    "Changing admin-only permissions for Hero background, Video Memories, or Background Song.",
+    "Introducing new backend services, databases, or multi-canister architecture."
   ],
   "imageRequirements": {
     "required": [],

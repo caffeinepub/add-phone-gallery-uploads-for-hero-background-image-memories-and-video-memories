@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Upload, Image, Video, Trash2, X, Check, Save, Settings, Music, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, AlertCircle, CheckCircle2, Eye } from 'lucide-react';
+import { Upload, Image, Video, Trash2, X, Check, Save, Settings, Music, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, AlertCircle, CheckCircle2, Eye, Lock, Info } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
 import { useMediaDraft } from '../hooks/useMediaDraft';
 import { usePublishWithPrecheck } from '../hooks/usePublishWithPrecheck';
+import { useMediaManagerPermissions } from '../hooks/useMediaManagerPermissions';
 import { formatDiagnosticForUser } from '../lib/deployDiagnostics';
 import ImageAdjustModal from './ImageAdjustModal';
 import type { PrePublishConfig } from '../backend';
@@ -36,6 +37,8 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
     imageOrder: liveImageOrder,
     imageTransforms: liveImageTransforms,
   } = useMediaStore();
+
+  const permissions = useMediaManagerPermissions();
 
   const {
     draft,
@@ -113,6 +116,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }, [status, isClosingAfterSubmit, onClose]);
 
   function handleHeroUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!permissions.canEditHero) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -127,6 +131,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleImageUpload(slotIndex: number, file: File) {
+    if (!permissions.canEditImages) return;
     setImage(slotIndex, file);
     
     // Revoke previous preview URL for this slot if exists
@@ -141,6 +146,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleVideoUpload(slotIndex: number, file: File) {
+    if (!permissions.canEditVideos) return;
     setVideo(slotIndex, file);
     
     // Revoke previous preview URL for this slot if exists
@@ -155,6 +161,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleSongUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!permissions.canEditSong) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -169,6 +176,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearHero() {
+    if (!permissions.canEditHero) return;
     if (!confirm('Clear hero background? This will remove the uploaded background.')) return;
     setHero('clear');
     setPreviewUrls((prev) => {
@@ -178,6 +186,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearImage(slotIndex: number) {
+    if (!permissions.canEditImages) return;
     if (!confirm('Clear this image? This will remove the uploaded image.')) return;
     setImage(slotIndex, 'clear');
     const previewUrl = previewUrls.images.get(slotIndex);
@@ -192,6 +201,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearVideo(slotIndex: number) {
+    if (!permissions.canEditVideos) return;
     if (!confirm('Clear this video? This will remove the uploaded video.')) return;
     setVideo(slotIndex, 'clear');
     const previewUrl = previewUrls.videos.get(slotIndex);
@@ -206,6 +216,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   }
 
   function handleClearSong() {
+    if (!permissions.canEditSong) return;
     if (!confirm('Clear background song? This will remove the uploaded song.')) return;
     setSong('clear');
     setPreviewUrls((prev) => {
@@ -223,11 +234,14 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   async function handleSubmit() {
     setIsClosingAfterSubmit(true);
 
+    // For non-admin users, only publish image-related changes
+    const isImagesOnlyMode = !permissions.isAdmin;
+
     const result = await publish({
-      hero: draft.hero === null ? undefined : draft.hero,
+      hero: isImagesOnlyMode ? undefined : (draft.hero === null ? undefined : draft.hero),
       images: draft.images,
-      videos: draft.videos,
-      song: draft.song === null ? undefined : draft.song,
+      videos: isImagesOnlyMode ? new Map() : draft.videos,
+      song: isImagesOnlyMode ? undefined : (draft.song === null ? undefined : draft.song),
       imageOrder: draft.imageOrder,
       imageTransforms: draft.imageTransforms,
     });
@@ -290,19 +304,21 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
             ? 'border-rose-600 ring-2 ring-rose-400'
             : 'border-rose-200 bg-rose-50 hover:border-rose-400'
         }`}
-        draggable
-        onDragStart={() => startDrag(slotIndex)}
+        draggable={permissions.canEditImages}
+        onDragStart={() => permissions.canEditImages && startDrag(slotIndex)}
         onDragOver={(e) => {
+          if (!permissions.canEditImages) return;
           e.preventDefault();
           setDropTarget(slotIndex);
         }}
         onDragLeave={() => setDropTarget(null)}
         onDrop={(e) => {
+          if (!permissions.canEditImages) return;
           e.preventDefault();
           endDrag();
         }}
         onDragEnd={() => endDrag()}
-        onClick={() => setSelectedSlot(isSelected ? null : slotIndex)}
+        onClick={() => permissions.canEditImages && setSelectedSlot(isSelected ? null : slotIndex)}
       >
         {hasImage && imageUrl ? (
           <img
@@ -326,104 +342,108 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
         )}
 
         {/* Desktop hover overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImageUpload(slotIndex, file);
-              e.target.value = '';
-            }}
-            disabled={status === 'running'}
-            className="hidden"
-            id={`image-slot-${slotIndex}`}
-          />
-          <Label
-            htmlFor={`image-slot-${slotIndex}`}
-            className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
-          >
-            <Upload className="w-3 h-3" />
-            <span>{hasImage ? 'Replace' : 'Upload'}</span>
-          </Label>
+        {permissions.canEditImages && (
+          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(slotIndex, file);
+                e.target.value = '';
+              }}
+              disabled={status === 'running'}
+              className="hidden"
+              id={`image-slot-${slotIndex}`}
+            />
+            <Label
+              htmlFor={`image-slot-${slotIndex}`}
+              className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
+            >
+              <Upload className="w-3 h-3" />
+              <span>{hasImage ? 'Replace' : 'Upload'}</span>
+            </Label>
 
-          {hasImage && (
-            <>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-auto px-2 py-1 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAdjustingSlot(slotIndex);
-                }}
-              >
-                <Settings className="w-3 h-3" />
-                <span>Adjust</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="h-auto px-2 py-1 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClearImage(slotIndex);
-                }}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </>
-          )}
-        </div>
+            {hasImage && (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAdjustingSlot(slotIndex);
+                  }}
+                >
+                  <Settings className="w-3 h-3" />
+                  <span>Adjust</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearImage(slotIndex);
+                  }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Mobile controls - always visible */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex md:hidden items-center justify-center gap-1">
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImageUpload(slotIndex, file);
-              e.target.value = '';
-            }}
-            disabled={status === 'running'}
-            className="hidden"
-            id={`image-slot-mobile-${slotIndex}`}
-          />
-          <Label
-            htmlFor={`image-slot-mobile-${slotIndex}`}
-            className="cursor-pointer bg-white/90 text-rose-900 px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
-          >
-            <Upload className="w-3 h-3" />
-          </Label>
+        {permissions.canEditImages && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex md:hidden items-center justify-center gap-1">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(slotIndex, file);
+                e.target.value = '';
+              }}
+              disabled={status === 'running'}
+              className="hidden"
+              id={`image-slot-mobile-${slotIndex}`}
+            />
+            <Label
+              htmlFor={`image-slot-mobile-${slotIndex}`}
+              className="cursor-pointer bg-white/90 text-rose-900 px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
+            >
+              <Upload className="w-3 h-3" />
+            </Label>
 
-          {hasImage && (
-            <>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-auto px-2 py-1 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAdjustingSlot(slotIndex);
-                }}
-              >
-                <Settings className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="h-auto px-2 py-1 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClearImage(slotIndex);
-                }}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </>
-          )}
-        </div>
+            {hasImage && (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAdjustingSlot(slotIndex);
+                  }}
+                >
+                  <Settings className="w-3 h-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearImage(slotIndex);
+                  }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="absolute top-1 left-1 bg-rose-900/80 text-white text-xs px-2 py-0.5 rounded">
           #{slotIndex}
@@ -468,71 +488,84 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
         )}
 
         {/* Desktop hover overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
-          <input
-            type="file"
-            accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleVideoUpload(slotIndex, file);
-              e.target.value = '';
-            }}
-            disabled={status === 'running'}
-            className="hidden"
-            id={`video-slot-${slotIndex}`}
-          />
-          <Label
-            htmlFor={`video-slot-${slotIndex}`}
-            className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1"
-          >
-            <Upload className="w-3 h-3" />
-            <span>{hasVideo ? 'Replace' : 'Upload'}</span>
-          </Label>
-
-          {hasVideo && (
-            <Button
-              size="sm"
-              variant="destructive"
-              className="h-auto px-2 py-1 text-xs"
-              onClick={() => handleClearVideo(slotIndex)}
+        {permissions.canEditVideos && (
+          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
+            <input
+              type="file"
+              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleVideoUpload(slotIndex, file);
+                e.target.value = '';
+              }}
+              disabled={status === 'running'}
+              className="hidden"
+              id={`video-slot-${slotIndex}`}
+            />
+            <Label
+              htmlFor={`video-slot-${slotIndex}`}
+              className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1"
             >
-              <Trash2 className="w-3 h-3" />
-            </Button>
-          )}
-        </div>
+              <Upload className="w-3 h-3" />
+              <span>{hasVideo ? 'Replace' : 'Upload'}</span>
+            </Label>
+
+            {hasVideo && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-auto px-2 py-1 text-xs"
+                onClick={() => handleClearVideo(slotIndex)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Mobile controls - always visible */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex md:hidden items-center justify-center gap-1">
-          <input
-            type="file"
-            accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleVideoUpload(slotIndex, file);
-              e.target.value = '';
-            }}
-            disabled={status === 'running'}
-            className="hidden"
-            id={`video-slot-mobile-${slotIndex}`}
-          />
-          <Label
-            htmlFor={`video-slot-mobile-${slotIndex}`}
-            className="cursor-pointer bg-white/90 text-rose-900 px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
-          >
-            <Upload className="w-3 h-3" />
-          </Label>
-
-          {hasVideo && (
-            <Button
-              size="sm"
-              variant="destructive"
-              className="h-auto px-2 py-1 text-xs"
-              onClick={() => handleClearVideo(slotIndex)}
+        {permissions.canEditVideos && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex md:hidden items-center justify-center gap-1">
+            <input
+              type="file"
+              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleVideoUpload(slotIndex, file);
+                e.target.value = '';
+              }}
+              disabled={status === 'running'}
+              className="hidden"
+              id={`video-slot-mobile-${slotIndex}`}
+            />
+            <Label
+              htmlFor={`video-slot-mobile-${slotIndex}`}
+              className="cursor-pointer bg-white/90 text-rose-900 px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
             >
-              <Trash2 className="w-3 h-3" />
-            </Button>
-          )}
-        </div>
+              <Upload className="w-3 h-3" />
+            </Label>
+
+            {hasVideo && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-auto px-2 py-1 text-xs"
+                onClick={() => handleClearVideo(slotIndex)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        )}
+
+        {!permissions.canEditVideos && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <div className="text-center text-white px-4">
+              <Lock className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-xs">Administrator access required</p>
+            </div>
+          </div>
+        )}
 
         <div className="absolute top-1 left-1 bg-rose-900/80 text-white text-xs px-2 py-0.5 rounded">
           #{slotIndex}
@@ -584,6 +617,9 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
 
   const formattedError = error ? formatDiagnosticForUser(error) : null;
 
+  // Determine which tabs to show based on permissions
+  const isImagesOnlyMode = !permissions.isAdmin;
+
   return (
     <>
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
@@ -591,7 +627,9 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-rose-900">Media Manager</DialogTitle>
             <DialogDescription>
-              Manage your Hero background, Image Memories, Video Memories, and Background Song. Click Submit to save all changes.
+              {isImagesOnlyMode 
+                ? 'Manage your Image Memories. Upload, adjust, reorder, and clear images. Click Submit to save all changes.'
+                : 'Manage your Hero background, Image Memories, Video Memories, and Background Song. Click Submit to save all changes.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -620,90 +658,100 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
             </Alert>
           )}
 
-          {/* Pre-publish Check Section */}
-          <Collapsible open={showPrecheckConfig} onOpenChange={setShowPrecheckConfig}>
-            <div className="border rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="p-0 h-auto">
-                    <Settings className="w-4 h-4 mr-2" />
-                    <span className="font-semibold">Pre-publish Check</span>
+          {/* Pre-publish Check Section - only for admins */}
+          {permissions.isAdmin && (
+            <Collapsible open={showPrecheckConfig} onOpenChange={setShowPrecheckConfig}>
+              <div className="border rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="p-0 h-auto">
+                      <Settings className="w-4 h-4 mr-2" />
+                      <span className="font-semibold">Pre-publish Check</span>
+                    </Button>
+                  </CollapsibleTrigger>
+                  {precheckResult === 'passed' && (
+                    <div className="flex items-center gap-1 text-green-600 text-sm">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Passed</span>
+                    </div>
+                  )}
+                  {precheckResult === 'failed' && (
+                    <div className="flex items-center gap-1 text-red-600 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Failed</span>
+                    </div>
+                  )}
+                </div>
+                
+                <CollapsibleContent className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="frontend-build-failed" className="text-sm">
+                      Simulate frontend build failure
+                    </Label>
+                    <Switch
+                      id="frontend-build-failed"
+                      checked={precheckConfig.frontendBuildFailed}
+                      onCheckedChange={(checked) =>
+                        setPrecheckConfig((prev) => ({ ...prev, frontendBuildFailed: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="missing-artifacts" className="text-sm">
+                      Simulate missing artifacts
+                    </Label>
+                    <Switch
+                      id="missing-artifacts"
+                      checked={precheckConfig.missingArtifacts}
+                      onCheckedChange={(checked) =>
+                        setPrecheckConfig((prev) => ({ ...prev, missingArtifacts: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="misconfigured-canister" className="text-sm">
+                      Simulate misconfigured canister
+                    </Label>
+                    <Switch
+                      id="misconfigured-canister"
+                      checked={precheckConfig.misconfiguredCanister}
+                      onCheckedChange={(checked) =>
+                        setPrecheckConfig((prev) => ({ ...prev, misconfiguredCanister: checked }))
+                      }
+                    />
+                  </div>
+                  <Button
+                    onClick={handleRunPrecheck}
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2"
+                    disabled={isSubmitting}
+                  >
+                    Run Check
                   </Button>
-                </CollapsibleTrigger>
-                {precheckResult === 'passed' && (
-                  <div className="flex items-center gap-1 text-green-600 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Passed</span>
-                  </div>
-                )}
-                {precheckResult === 'failed' && (
-                  <div className="flex items-center gap-1 text-red-600 text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>Failed</span>
-                  </div>
-                )}
+                </CollapsibleContent>
               </div>
-              
-              <CollapsibleContent className="mt-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="frontend-build-failed" className="text-sm">
-                    Simulate frontend build failure
-                  </Label>
-                  <Switch
-                    id="frontend-build-failed"
-                    checked={precheckConfig.frontendBuildFailed}
-                    onCheckedChange={(checked) =>
-                      setPrecheckConfig((prev) => ({ ...prev, frontendBuildFailed: checked }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="missing-artifacts" className="text-sm">
-                    Simulate missing artifacts
-                  </Label>
-                  <Switch
-                    id="missing-artifacts"
-                    checked={precheckConfig.missingArtifacts}
-                    onCheckedChange={(checked) =>
-                      setPrecheckConfig((prev) => ({ ...prev, missingArtifacts: checked }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="misconfigured-canister" className="text-sm">
-                    Simulate misconfigured canister
-                  </Label>
-                  <Switch
-                    id="misconfigured-canister"
-                    checked={precheckConfig.misconfiguredCanister}
-                    onCheckedChange={(checked) =>
-                      setPrecheckConfig((prev) => ({ ...prev, misconfiguredCanister: checked }))
-                    }
-                  />
-                </div>
-                <Button
-                  onClick={handleRunPrecheck}
-                  size="sm"
-                  variant="outline"
-                  className="w-full mt-2"
-                  disabled={isSubmitting}
-                >
-                  Run Check
-                </Button>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
+            </Collapsible>
+          )}
 
-          <Tabs defaultValue="preview" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="preview">
-                <Eye className="w-4 h-4 mr-1" />
-                Preview
-              </TabsTrigger>
-              <TabsTrigger value="hero">Hero</TabsTrigger>
+          <Tabs defaultValue={isImagesOnlyMode ? "images" : "preview"} className="flex-1 flex flex-col min-h-0">
+            <TabsList className={`grid w-full ${isImagesOnlyMode ? 'grid-cols-2' : 'grid-cols-5'}`}>
+              {!isImagesOnlyMode && (
+                <TabsTrigger value="preview">
+                  <Eye className="w-4 h-4 mr-1" />
+                  Preview
+                </TabsTrigger>
+              )}
+              {!isImagesOnlyMode && <TabsTrigger value="hero">Hero</TabsTrigger>}
               <TabsTrigger value="images">Images ({imageUrls.size + previewUrls.images.size}/43)</TabsTrigger>
-              <TabsTrigger value="videos">Videos ({videoUrls.size + previewUrls.videos.size}/6)</TabsTrigger>
-              <TabsTrigger value="song">Song</TabsTrigger>
+              {!isImagesOnlyMode && <TabsTrigger value="videos">Videos ({videoUrls.size + previewUrls.videos.size}/6)</TabsTrigger>}
+              {!isImagesOnlyMode && <TabsTrigger value="song">Song</TabsTrigger>}
+              {isImagesOnlyMode && (
+                <TabsTrigger value="preview">
+                  <Eye className="w-4 h-4 mr-1" />
+                  Preview
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="preview" className="flex-1 mt-4 min-h-0">
@@ -711,28 +759,34 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                 <div className="space-y-6">
                   <div className="text-center mb-4">
                     <h3 className="text-lg font-semibold text-rose-900 mb-2">Draft Preview</h3>
-                    <p className="text-sm text-rose-600">This is what will be published when you click Submit</p>
+                    <p className="text-sm text-rose-600">
+                      {isImagesOnlyMode 
+                        ? 'This is what will be published when you click Submit'
+                        : 'This is what will be published when you click Submit'}
+                    </p>
                   </div>
 
-                  {/* Hero Preview */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                      <Image className="w-4 h-4" />
-                      Hero Background
-                    </h4>
-                    <div className="relative aspect-video max-w-md mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
-                      {currentHeroUrl ? (
-                        <img src={currentHeroUrl} alt="Hero preview" className="w-full h-full object-cover" loading="eager" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-rose-300">
-                          <div className="text-center">
-                            <Image className="w-12 h-12 mx-auto mb-2" />
-                            <p className="text-sm">No hero background uploaded</p>
+                  {/* Hero Preview - only for admins */}
+                  {!isImagesOnlyMode && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                        <Image className="w-4 h-4" />
+                        Hero Background
+                      </h4>
+                      <div className="relative aspect-video max-w-md mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
+                        {currentHeroUrl ? (
+                          <img src={currentHeroUrl} alt="Hero preview" className="w-full h-full object-cover" loading="eager" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-rose-300">
+                            <div className="text-center">
+                              <Image className="w-12 h-12 mx-auto mb-2" />
+                              <p className="text-sm">No hero background uploaded</p>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Images Preview */}
                   <div className="space-y-2">
@@ -784,125 +838,150 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                     <p className="text-xs text-muted-foreground text-center">Showing first 12 images in draft order</p>
                   </div>
 
-                  {/* Videos Preview */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                      <Video className="w-4 h-4" />
-                      Video Memories ({Array.from({ length: 6 }, (_, i) => i + 1).filter(idx => {
-                        const draftFile = draft.videos.get(idx);
-                        return draftFile !== 'clear' && (previewUrls.videos.has(idx) || videoUrls.has(idx));
-                      }).length}/6)
-                    </h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => {
-                        const draftFile = draft.videos.get(slotIndex);
-                        const previewUrl = previewUrls.videos.get(slotIndex);
-                        const isCleared = draftFile === 'clear';
-                        const hasVideo = !isCleared && (videoUrls.has(slotIndex) || previewUrl);
-                        const videoUrl = previewUrl || videoUrls.get(slotIndex);
+                  {/* Videos Preview - only for admins */}
+                  {!isImagesOnlyMode && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                        <Video className="w-4 h-4" />
+                        Video Memories ({Array.from({ length: 6 }, (_, i) => i + 1).filter(idx => {
+                          const draftFile = draft.videos.get(idx);
+                          return draftFile !== 'clear' && (previewUrls.videos.has(idx) || videoUrls.has(idx));
+                        }).length}/6)
+                      </h4>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => {
+                          const draftFile = draft.videos.get(slotIndex);
+                          const previewUrl = previewUrls.videos.get(slotIndex);
+                          const isCleared = draftFile === 'clear';
+                          const hasVideo = !isCleared && (videoUrls.has(slotIndex) || previewUrl);
+                          const videoUrl = previewUrl || videoUrls.get(slotIndex);
 
-                        return (
-                          <div key={slotIndex} className="relative aspect-[9/16] rounded border border-rose-200 bg-rose-50 overflow-hidden">
-                            {hasVideo && videoUrl ? (
-                              <video src={videoUrl} className="w-full h-full object-cover" muted playsInline preload="auto" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-rose-300">
-                                <Video className="w-4 h-4" />
+                          return (
+                            <div key={slotIndex} className="relative aspect-[9/16] rounded border border-rose-200 bg-rose-50 overflow-hidden">
+                              {hasVideo && videoUrl ? (
+                                <video src={videoUrl} className="w-full h-full object-cover" muted playsInline preload="auto" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-rose-300">
+                                  <Video className="w-4 h-4" />
+                                </div>
+                              )}
+                              <div className="absolute top-0.5 left-0.5 bg-rose-900/80 text-white text-[10px] px-1 rounded">
+                                #{slotIndex}
                               </div>
-                            )}
-                            <div className="absolute top-0.5 left-0.5 bg-rose-900/80 text-white text-[10px] px-1 rounded">
-                              #{slotIndex}
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Song Preview */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                      <Music className="w-4 h-4" />
-                      Background Song
-                    </h4>
-                    <div className="max-w-md mx-auto rounded-lg border-2 border-rose-200 bg-rose-50 p-4">
-                      {currentSongUrl ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-center text-rose-600">
-                            <Music className="w-12 h-12" />
+                  {/* Song Preview - only for admins */}
+                  {!isImagesOnlyMode && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                        <Music className="w-4 h-4" />
+                        Background Song
+                      </h4>
+                      <div className="max-w-md mx-auto rounded-lg border-2 border-rose-200 bg-rose-50 p-4">
+                        {currentSongUrl ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-center text-rose-600">
+                              <Music className="w-12 h-12" />
+                            </div>
+                            <audio src={currentSongUrl} controls className="w-full" preload="auto" />
+                            <p className="text-center text-sm text-rose-700 font-medium">Custom song</p>
                           </div>
-                          <audio src={currentSongUrl} controls className="w-full" preload="auto" />
-                          <p className="text-center text-sm text-rose-700 font-medium">Custom song</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-center text-rose-300">
-                            <Music className="w-12 h-12" />
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-center text-rose-300">
+                              <Music className="w-12 h-12" />
+                            </div>
+                            <p className="text-center text-sm text-rose-600">No song uploaded</p>
                           </div>
-                          <p className="text-center text-sm text-rose-600">No song uploaded</p>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="hero" className="flex-1 mt-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold text-rose-900 flex items-center gap-2">
-                    <Image className="w-5 h-5" />
-                    Hero Background
-                  </Label>
-                  {currentHeroUrl && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearHero}
-                      disabled={isSubmitting}
-                      className="text-rose-600 hover:text-rose-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="relative aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
-                  {currentHeroUrl ? (
-                    <img src={currentHeroUrl} alt="Hero background" className="w-full h-full object-cover" loading="eager" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-rose-300">
-                      <Image className="w-16 h-16" />
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                      onChange={handleHeroUpload}
-                      disabled={isSubmitting}
-                      className="hidden"
-                      id="hero-upload"
-                    />
-                    <Label
-                      htmlFor="hero-upload"
-                      className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span>{currentHeroUrl ? 'Replace Background' : 'Upload Background'}</span>
+            {!isImagesOnlyMode && (
+              <TabsContent value="hero" className="flex-1 mt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold text-rose-900 flex items-center gap-2">
+                      <Image className="w-5 h-5" />
+                      Hero Background
                     </Label>
+                    {currentHeroUrl && permissions.canEditHero && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearHero}
+                        disabled={isSubmitting}
+                        className="text-rose-600 hover:text-rose-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
-                </div>
 
-                {draft.hero && (
-                  <p className="text-center text-sm text-amber-600 font-medium">⚠ Pending changes (click Submit to save)</p>
-                )}
-              </div>
-            </TabsContent>
+                  <div className="relative aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
+                    {currentHeroUrl ? (
+                      <img src={currentHeroUrl} alt="Hero background" className="w-full h-full object-cover" loading="eager" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-rose-300">
+                        <Image className="w-16 h-16" />
+                      </div>
+                    )}
+
+                    {permissions.canEditHero && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                          onChange={handleHeroUpload}
+                          disabled={isSubmitting}
+                          className="hidden"
+                          id="hero-upload"
+                        />
+                        <Label
+                          htmlFor="hero-upload"
+                          className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span>{currentHeroUrl ? 'Replace Background' : 'Upload Background'}</span>
+                        </Label>
+                      </div>
+                    )}
+
+                    {!permissions.canEditHero && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="text-center text-white px-4">
+                          <Lock className="w-12 h-12 mx-auto mb-2" />
+                          <p className="text-sm">Administrator access required</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {draft.hero && (
+                    <p className="text-center text-sm text-amber-600 font-medium">⚠ Pending changes (click Submit to save)</p>
+                  )}
+                </div>
+              </TabsContent>
+            )}
 
             <TabsContent value="images" className="flex-1 mt-4 min-h-0 flex flex-col">
+              {/* Helper text about file picker */}
+              <Alert className="mb-4 bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-sm text-blue-900">
+                  When you tap Upload, your device will show a file picker. Depending on your device, you may see options like "Photos", "Gallery", or "Google Drive". You can select images from any of these sources without needing to log in to Google Drive separately.
+                </AlertDescription>
+              </Alert>
+
               <ScrollArea className="h-[500px] pr-4">
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                   {draft.imageOrder.map((slotIndex) => (
@@ -912,7 +991,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
               </ScrollArea>
               
               {/* Mobile reorder controls */}
-              {selectedSlot !== null && (
+              {selectedSlot !== null && permissions.canEditImages && (
                 <div className="mt-4 p-3 bg-rose-50 rounded-lg border border-rose-200 md:hidden">
                   <p className="text-sm font-medium text-rose-900 mb-2">Move Image #{selectedSlot}</p>
                   <div className="flex items-center justify-center gap-2">
@@ -959,87 +1038,110 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
               </p>
             </TabsContent>
 
-            <TabsContent value="videos" className="flex-1 mt-4 min-h-0">
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => (
-                    <VideoSlot key={slotIndex} slotIndex={slotIndex} />
-                  ))}
-                </div>
-              </ScrollArea>
-              <p className="text-xs text-muted-foreground mt-4 text-center">
-                <span className="hidden md:inline">Hover over any slot to upload or replace.</span>
-                <span className="md:hidden">Tap controls to upload or replace.</span>
-                <span className="block mt-1">Accepts .mp4, .mov, .webm</span>
-              </p>
-            </TabsContent>
-
-            <TabsContent value="song" className="flex-1 mt-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold text-rose-900 flex items-center gap-2">
-                    <Music className="w-5 h-5" />
-                    Background Song
-                  </Label>
-                  {currentSongUrl && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearSong}
-                      disabled={isSubmitting}
-                      className="text-rose-600 hover:text-rose-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="relative max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50 p-8">
-                  {currentSongUrl ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center text-rose-600">
-                        <Music className="w-16 h-16" />
-                      </div>
-                      <audio src={currentSongUrl} controls className="w-full" preload="auto" />
-                      <p className="text-center text-sm text-rose-700 font-medium">Custom song uploaded</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center text-rose-300">
-                        <Music className="w-16 h-16" />
-                      </div>
-                      <p className="text-center text-sm text-rose-600">No custom song uploaded</p>
-                    </div>
-                  )}
-
-                  <div className="mt-6 flex items-center justify-center">
-                    <input
-                      type="file"
-                      accept=".mp3,.wav,audio/mpeg,audio/wav"
-                      onChange={handleSongUpload}
-                      disabled={isSubmitting}
-                      className="hidden"
-                      id="song-upload"
-                    />
-                    <Label
-                      htmlFor="song-upload"
-                      className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span>{currentSongUrl ? 'Replace Song' : 'Upload Song'}</span>
-                    </Label>
+            {!isImagesOnlyMode && (
+              <TabsContent value="videos" className="flex-1 mt-4 min-h-0">
+                <ScrollArea className="h-[500px] pr-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => (
+                      <VideoSlot key={slotIndex} slotIndex={slotIndex} />
+                    ))}
                   </div>
-                </div>
-
-                {draft.song && (
-                  <p className="text-center text-sm text-amber-600 font-medium">⚠ Pending changes (click Submit to save)</p>
-                )}
-
-                <p className="text-xs text-muted-foreground text-center">
-                  Accepts .mp3, .wav audio files
+                </ScrollArea>
+                <p className="text-xs text-muted-foreground mt-4 text-center">
+                  {permissions.canEditVideos ? (
+                    <>
+                      <span className="hidden md:inline">Hover over any slot to upload or replace.</span>
+                      <span className="md:hidden">Tap controls to upload or replace.</span>
+                      <span className="block mt-1">Accepts .mp4, .mov, .webm</span>
+                    </>
+                  ) : (
+                    <span className="text-rose-600">Administrator access required</span>
+                  )}
                 </p>
-              </div>
-            </TabsContent>
+              </TabsContent>
+            )}
+
+            {!isImagesOnlyMode && (
+              <TabsContent value="song" className="flex-1 mt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold text-rose-900 flex items-center gap-2">
+                      <Music className="w-5 h-5" />
+                      Background Song
+                    </Label>
+                    {currentSongUrl && permissions.canEditSong && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearSong}
+                        disabled={isSubmitting}
+                        className="text-rose-600 hover:text-rose-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="relative max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50 p-8">
+                    {currentSongUrl ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center text-rose-600">
+                          <Music className="w-16 h-16" />
+                        </div>
+                        <audio src={currentSongUrl} controls className="w-full" preload="auto" />
+                        <p className="text-center text-sm text-rose-700 font-medium">Custom song uploaded</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center text-rose-300">
+                          <Music className="w-16 h-16" />
+                        </div>
+                        <p className="text-center text-sm text-rose-600">No custom song uploaded</p>
+                      </div>
+                    )}
+
+                    {permissions.canEditSong && (
+                      <div className="mt-6 flex items-center justify-center">
+                        <input
+                          type="file"
+                          accept=".mp3,.wav,audio/mpeg,audio/wav"
+                          onChange={handleSongUpload}
+                          disabled={isSubmitting}
+                          className="hidden"
+                          id="song-upload"
+                        />
+                        <Label
+                          htmlFor="song-upload"
+                          className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span>{currentSongUrl ? 'Replace Song' : 'Upload Song'}</span>
+                        </Label>
+                      </div>
+                    )}
+
+                    {!permissions.canEditSong && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="text-center text-white px-4">
+                          <Lock className="w-12 h-12 mx-auto mb-2" />
+                          <p className="text-sm">Administrator access required</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {draft.song && (
+                    <p className="text-center text-sm text-amber-600 font-medium">⚠ Pending changes (click Submit to save)</p>
+                  )}
+
+                  {permissions.canEditSong && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Accepts .mp3, .wav audio files
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           <DialogFooter className="flex-row gap-2 sm:gap-2 border-t pt-4">
@@ -1050,7 +1152,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
             <div className="flex-1" />
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !hasPendingChanges}
+              disabled={isSubmitting || !hasPendingChanges || permissions.isLoading}
               className="bg-rose-600 hover:bg-rose-700"
             >
               {isSubmitting ? (

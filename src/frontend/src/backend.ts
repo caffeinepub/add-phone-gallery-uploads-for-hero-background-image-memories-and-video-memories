@@ -163,12 +163,16 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCurrentVersion(): Promise<VersionInfo | null>;
+    getImageUploaderAllowlist(): Promise<Array<Principal>>;
     getPublishedMedia(): Promise<PublishedMedia>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getVersion(version: string): Promise<VersionInfo | null>;
+    grantImageUploaderAccess(user: Principal): Promise<void>;
+    hasImageUploaderAccess(user: Principal): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     prePublishCheck(config: PrePublishConfig): Promise<PrePublishResult>;
     recordDeployment(version: string, status: DeploymentStatus): Promise<void>;
+    revokeImageUploaderAccess(user: Principal): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setBackgroundSong(blob: ExternalBlob): Promise<void>;
     setHeroBackground(blob: ExternalBlob): Promise<void>;
@@ -416,6 +420,20 @@ export class Backend implements backendInterface {
             return from_candid_opt_n22(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getImageUploaderAllowlist(): Promise<Array<Principal>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getImageUploaderAllowlist();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getImageUploaderAllowlist();
+            return result;
+        }
+    }
     async getPublishedMedia(): Promise<PublishedMedia> {
         if (this.processError) {
             try {
@@ -458,6 +476,34 @@ export class Backend implements backendInterface {
             return from_candid_opt_n22(this._uploadFile, this._downloadFile, result);
         }
     }
+    async grantImageUploaderAccess(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.grantImageUploaderAccess(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.grantImageUploaderAccess(arg0);
+            return result;
+        }
+    }
+    async hasImageUploaderAccess(arg0: Principal): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.hasImageUploaderAccess(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.hasImageUploaderAccess(arg0);
+            return result;
+        }
+    }
     async isCallerAdmin(): Promise<boolean> {
         if (this.processError) {
             try {
@@ -497,6 +543,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.recordDeployment(arg0, to_candid_DeploymentStatus_n34(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async revokeImageUploaderAccess(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.revokeImageUploaderAccess(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.revokeImageUploaderAccess(arg0);
             return result;
         }
     }

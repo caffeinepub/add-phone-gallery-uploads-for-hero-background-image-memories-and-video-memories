@@ -1,69 +1,60 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-06T03:12:34.537Z",
-  "summary": "Diff adds a backend `publishedMedia` structure and multiple frontend changes to render only committed uploaded media with explicit empty states, eager loading, and new media diagnostics utilities. However, upgrade persistence for published media and evidence of deterministic decoding/log emission are not fully demonstrated in the provided truncated diff, and some unrelated romantic content/UI text appears to have been changed.",
+  "generatedAt": "2026-02-06T04:04:25.274Z",
+  "summary": "Frontend permissions hook was updated to make Images editable for everyone, and backend was updated to use a migration module on deploy; however, the diff summary does not provide clear evidence that backend setImage/clearImage authorization was changed as required, nor that Media Manager UI copy and non-admin submit behavior were updated per the acceptance criteria.",
   "missing_requirements": [
     {
-      "id": "REQ-53",
-      "requirement": "The committed media set survives canister upgrades/deployments that do not intentionally wipe state (no unexpected resets).",
-      "reason": "`publishedMedia` is introduced as a normal `var` in `backend/main.mo` but there is no evidence it is stored in `stable` variables and no `backend/migration.mo` is added/shown to migrate or preserve state across upgrades.",
+      "id": "REQ-62",
+      "requirement": "Update backend image publishing/clearing authorization so that ANY caller (including non-admin users) can publish and clear Image Memory slots (indices 0–42), while keeping Hero/Video/Song admin-only and preserving invalid-index errors.",
+      "reason": "The backend diff is truncated before any setImage/clearImage/setHeroBackground/setVideo/setBackgroundSong authorization logic is shown, so there is no explicit evidence that the image allowlist restriction was removed for publishing/clearing or that admin-only restrictions for hero/video/song remain enforced with clear authorization errors.",
       "evidence": [
-        "backend/main.mo"
+        "backend/main.mo (truncated; no visible setImage/clearImage or related auth checks)"
       ]
     },
     {
-      "id": "REQ-56",
-      "requirement": "Frontend decoding/mapping of `getPublishedMedia()` must be deterministic and identical across Preview and Published, including consistent interpretation of optionals/tuples and slot indexing, and must not silently drop media due to decode/mapping issues.",
-      "reason": "The diff shows `PublishedMedia` contains arrays of optionals/tuples (`[?(Text, Storage.ExternalBlob)]`), and the frontend now calls `fetchPublishedMedia(actor)`, but the implementation of `fetchPublishedMedia` / mapping logic is not included in the provided diff summary, so deterministic decoding and correct slot-index mapping cannot be verified from evidence shown.",
+      "id": "REQ-63",
+      "requirement": "Update Media Manager permissions logic so Images tab is editable for all visitors, while Hero/Videos/Song remain admin-only; ensure Images tab no longer shows old lock text; non-admin submit publishes only image changes and shows errors in English without closing.",
+      "reason": "While canEditImages is set to true for everyone, the diff summary does not show the MediaManager UI changes needed to remove/replace the prior lock messaging on Images, nor does it show the submit flow logic ensuring non-admins only attempt image operations and keep the dialog open on errors.",
       "evidence": [
-        "backend/main.mo",
-        "frontend/src/context/MediaStoreContext.tsx"
+        "frontend/src/hooks/useMediaManagerPermissions.ts",
+        "frontend/src/components/MediaManager.tsx (truncated; submit/lock messaging not visible)"
       ]
     },
     {
-      "id": "REQ-57",
-      "requirement": "Emit exactly one structured, English-only diagnostic console log on app start and exactly one on every successful Submit confirming committed media state (counts + image order + transform counts), identical in shape across Draft/Preview/Published.",
-      "reason": "A diagnostics utility is added and imported in `MediaStoreContext` and `usePublishWithPrecheck`, but the provided diff excerpts do not show the actual call sites that guarantee (a) app-start log is emitted exactly once and (b) submit-success log is emitted exactly once per successful submit, with the required payload shape and fields (including image order + transform counts).",
+      "id": "REQ-64",
+      "requirement": "Update Media Manager UI copy to tell users they can choose images from phone gallery or Google Drive via the device file picker (no separate Google login).",
+      "reason": "No explicit new instruction/copy about selecting from 'Photos' or 'Google Drive' via the system picker is visible in the provided truncated MediaManager diff.",
       "evidence": [
-        "frontend/src/lib/mediaDiagnostics.ts",
-        "frontend/src/context/MediaStoreContext.tsx",
-        "frontend/src/hooks/usePublishWithPrecheck.ts"
+        "frontend/src/components/MediaManager.tsx (truncated; no visible instructional copy)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Changed/introduced romantic experience content and non-English/emoji-heavy user-facing text in the hero section (content unrelated to media rendering consistency).",
-      "reason": "BuildRequest explicitly lists as a non-goal: do not change romantic experience content/features unrelated to media rendering consistency, and also constrains user-facing text to English. The diff shows extensive hero headline/body text changes with non-English/emoji-heavy wording not tied to media rendering rules.",
+      "description": "Introduced a backend migration module and wired it into the actor deployment using `(with migration = Migration.run)`.",
+      "reason": "The BuildRequest did not request any data migration work; additionally, the constraints emphasized keeping backend logic changes in `backend/main.mo`, but this change adds a new backend file and imports it.",
       "evidence": [
-        "frontend/src/components/HeroSection.tsx"
+        "backend/migration.mo",
+        "backend/main.mo (imports Migration; `(with migration = Migration.run)`)"
       ]
     },
     {
-      "description": "Added new public documentation file about placeholders/uploaded-only behavior.",
-      "reason": "A new `frontend/public/PLACEHOLDER_MEDIA_README.txt` is added; this was not requested as a requirement and is not necessary to satisfy the media-rendering consistency requirements.",
+      "description": "Added frontend backend-error translation logic producing standardized English error titles/messages.",
+      "reason": "Not explicitly requested as a feature; while it may help meet the 'errors shown in English' acceptance criteria, the BuildRequest did not ask for a new translation layer as a discrete addition.",
       "evidence": [
-        "frontend/public/PLACEHOLDER_MEDIA_README.txt"
+        "frontend/src/hooks/usePublishWithPrecheck.ts (translateBackendError function)"
       ]
     }
   ],
-  "confidence": 0.66,
+  "confidence": 0.56,
   "changed_files": [
     "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/public/PLACEHOLDER_MEDIA_README.txt",
-    "frontend/src/components/FlipImageCard.tsx",
-    "frontend/src/components/HeroSection.tsx",
-    "frontend/src/components/ImageMemorySection.tsx",
     "frontend/src/components/MediaManager.tsx",
-    "frontend/src/components/MusicPlayer.tsx",
-    "frontend/src/components/VideoMemorySection.tsx",
-    "frontend/src/config/imageMemory.ts",
-    "frontend/src/config/videoMemory.ts",
-    "frontend/src/context/MediaStoreContext.tsx",
+    "frontend/src/hooks/useMediaManagerPermissions.ts",
     "frontend/src/hooks/usePublishWithPrecheck.ts",
-    "frontend/src/lib/mediaDiagnostics.ts",
     "project_state.json"
   ]
 }

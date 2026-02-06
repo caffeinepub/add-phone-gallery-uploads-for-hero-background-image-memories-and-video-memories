@@ -1,159 +1,46 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Uploaded-only, deterministic committed media rendering across Draft/Preview/Published",
+  "title": "Public image memory uploads via system file picker (gallery/Drive) in Media Manager",
   "requirements": [
     {
-      "id": "REQ-53",
-      "summary": "Render only the committed backend media set in all modes, and switch immediately to the committed set after Submit (no placeholder/static fallbacks).",
+      "id": "REQ-63",
+      "summary": "Make Images editable for all visitors while keeping Hero/Videos/Song admin-only, and ensure non-admin submit only publishes image changes with English error handling.",
       "acceptanceCriteria": [
-        "After clicking Submit in the Media Manager, navigating between Draft, Preview, and Published shows the exact same hero background, image grid content/order, video grid content, and background song without requiring a refresh.",
-        "On a fresh session where no local IndexedDB media exists, Preview and Published load the committed media from the backend and render it correctly (hero, all committed image slots, all committed video slots, song).",
-        "No slot that has committed uploaded media ever falls back to a static placeholder path in any mode.",
-        "The committed media set survives canister upgrades/deployments that do not intentionally wipe state (no unexpected resets)."
+        "When not an admin, the Media Manager still shows lock messaging for Hero/Videos/Song, but the Images tab allows Upload/Replace/Adjust/Clear/Reorder and Submit.",
+        "The Images tab no longer shows 'Administrator or image uploader access required' for non-admin users.",
+        "The submit flow in non-admin mode publishes only image-related changes (no hero/video/song actions attempted), and errors (if any) are shown in English without closing the dialog."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/context/MediaStoreContext.tsx",
+          "path": "frontend/src/hooks/useMediaManagerPermissions.ts",
           "operation": "modify",
-          "description": "Make the backend-published committed media set the sole rendering source for hero/images/videos/song (no IndexedDB/placeholder merging for main rendering); on successful refresh after Submit, replace the entire committed set deterministically (including clearing slots when backend has no media) and avoid reverting to any packaged/static placeholder assets. Use blob-storage ExternalBlob direct URLs for rendering committed media; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Ensure the main app sections (Hero/Image/Video/Music) consume only the committed MediaStoreContext render state so that Draft/Preview/Published behave identically and switch immediately after Submit (no refresh required)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-54",
-      "summary": "Apply an uploaded-only rendering rule: if a committed slot is missing, show explicit English empty states (no placeholder assets) for hero, images, videos, and song across all modes.",
-      "acceptanceCriteria": [
-        "When a slot has no committed uploaded media, the UI does not display any placeholder image/video/audio for that slot in Draft, Preview, or Published.",
-        "Empty states use clear English-only user-facing text (e.g., \"No image uploaded for this slot.\") and do not break layout.",
-        "When a slot does have committed uploaded media, that media is rendered (and not replaced by an empty state)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/HeroSection.tsx",
-          "operation": "modify",
-          "description": "Remove the packaged hero background fallback and render either the committed uploaded hero background or an explicit English empty-state UI (no static placeholder images)."
-        },
-        {
-          "path": "frontend/src/components/ImageMemorySection.tsx",
-          "operation": "modify",
-          "description": "Remove per-slot fallback to config placeholder image paths; render FlipImageCard only when committed uploaded media exists for the slot, otherwise render a stable English empty state that preserves the grid layout."
-        },
-        {
-          "path": "frontend/src/components/VideoMemorySection.tsx",
-          "operation": "modify",
-          "description": "Remove per-slot fallback to config placeholder video paths and remove error-driven fallback poster behavior that simulates placeholder content; render either the committed uploaded video or an explicit English empty state per slot without breaking layout."
-        },
-        {
-          "path": "frontend/src/components/MusicPlayer.tsx",
-          "operation": "modify",
-          "description": "Remove the packaged default song fallback; if no committed uploaded song exists, do not render an <audio> source and instead render an English-only empty/disabled player state that does not imply a default song."
+          "description": "Update permissions computation so Images are editable for all visitors (including anonymous/guest), while Hero/Videos/Song remain admin-only; keep permission state and user-facing lock logic consistent with the new behavior. Verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/components/MediaManager.tsx",
           "operation": "modify",
-          "description": "Update all user-facing text that references restoring placeholders/defaults to instead describe clearing to an empty state; ensure the Media Manager preview tab uses English empty-state language (no \"Default placeholder\" / \"Default song will play\")."
+          "description": "Adjust Media Manager tab visibility/behavior so non-admins can still see Hero/Videos/Song sections with lock messaging (not hidden), while Images remains fully editable; update submit flow gating so non-admin submit publishes only image-related changes (no hero/video/song calls), and ensure all lock/permission copy is accurate and in English. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/config/imageMemory.ts",
+          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
           "operation": "modify",
-          "description": "Remove static placeholder image paths from the image memory configuration so the UI cannot fall back to packaged assets for any slot; keep only slot IDs and messages needed for layout and flip-card text."
-        },
-        {
-          "path": "frontend/src/config/videoMemory.ts",
-          "operation": "modify",
-          "description": "Remove static placeholder video paths from the video memory configuration so the UI cannot fall back to packaged assets for any slot; keep only slot IDs needed for layout."
-        },
-        {
-          "path": "frontend/public/PLACEHOLDER_MEDIA_README.txt",
-          "operation": "modify",
-          "description": "Update documentation to reflect uploaded-only rendering behavior (no packaged placeholders/default media fallbacks) and clarify that missing slots render explicit empty states."
+          "description": "Update backend error translation messaging to reflect new authorization (remove/avoid image-uploader allowlist messaging), keeping all user-facing errors in clear English and ensuring failures do not close the dialog. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-55",
-      "summary": "Disable lazy-loading/visibility gating so committed uploaded media attaches immediately and starts loading on initial render across all modes.",
+      "id": "REQ-64",
+      "summary": "Update Media Manager UI copy to clarify users can pick images from phone gallery or Google Drive via the device file picker without any Drive login inside the app.",
       "acceptanceCriteria": [
-        "Committed uploaded hero background image begins loading immediately on page load (no user scroll/interaction required).",
-        "Committed uploaded image memory thumbnails begin loading immediately on page load (no `loading=\"lazy\"` on committed images).",
-        "Committed uploaded video thumbnails/players attach their `src` immediately on initial render (no intersection/scroll gating).",
-        "If autoplay is blocked for audio/video, the UI still renders the correct committed media and shows an English-only affordance to start playback; it must not replace media with placeholders."
+        "Media Manager includes a short, clear English instruction near image uploading controls, e.g., indicating that the upload picker may offer 'Photos' or 'Google Drive' depending on the device.",
+        "No UI implies a Google Drive OAuth/login integration or requires connecting a Drive account inside the app."
       ],
       "file_operations": [
-        {
-          "path": "frontend/src/components/HeroSection.tsx",
-          "operation": "modify",
-          "description": "Ensure committed hero background is eagerly applied (no conditional visibility gating that delays attachment/loading) and that empty state is explicit when missing."
-        },
-        {
-          "path": "frontend/src/components/FlipImageCard.tsx",
-          "operation": "modify",
-          "description": "Ensure committed images are eagerly attached and do not use lazy-loading attributes; remove any error fallback behavior that could mask missing committed media with pseudo-placeholders (keep failures as explicit/benign UI behavior)."
-        },
-        {
-          "path": "frontend/src/components/VideoMemorySection.tsx",
-          "operation": "modify",
-          "description": "Ensure committed videos attach their src immediately on first render (no deferred assignment or interaction gates); keep controls visible and show an English-only play affordance if autoplay is blocked, without substituting placeholders."
-        },
-        {
-          "path": "frontend/src/components/MusicPlayer.tsx",
-          "operation": "modify",
-          "description": "When a committed song exists, keep eager preload behavior; if autoplay is blocked, display an English-only prompt to start playback while still rendering the committed song source (and never falling back to a default packaged song)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-56",
-      "summary": "Make frontend decoding/mapping of getPublishedMedia deterministic so Preview and Published interpret the response identically with stable slot indexing and error handling.",
-      "acceptanceCriteria": [
-        "For a known committed set containing: hero background + N images + M videos + song, Preview and Published both report the same decoded counts and render the same items.",
-        "No committed image/video/song is missing due to frontend mapping/slot-index mismatches between UI slots and backend storage.",
-        "If backend returns media for a slot, the frontend renders it; it must not fall back to placeholders or empty states for that slot.",
-        "If a backend fetch fails, the app shows a clear English-only error state without resetting already-visible committed media in the current session."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/lib/publishedMediaClient.ts",
-          "operation": "modify",
-          "description": "Fix deterministic decoding for PublishedMedia so tuple entries ([name, ExternalBlob] | null) are not misinterpreted as optionals; ensure stable 0-based array index to 1-based UI slot mapping for images/videos and stable optional handling for hero/song. Use blob-storage ExternalBlob.getDirectURL to produce renderable URLs; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/context/MediaStoreContext.tsx",
-          "operation": "modify",
-          "description": "On backend fetch failures, preserve the current committed render state and surface a clear English-only error indicator/state (without resetting media to empty/placeholder) while keeping subsequent refresh attempts possible."
-        }
-      ]
-    },
-    {
-      "id": "REQ-57",
-      "summary": "Add structured, English-only diagnostic console logs on app start and on each successful Submit, reporting committed media counts and ordering/transform metadata without content.",
-      "acceptanceCriteria": [
-        "On app start, exactly one structured console log is emitted summarizing the render source used and counts of committed hero/images/videos/song available.",
-        "On Submit success, exactly one structured console log is emitted summarizing what was committed (uploaded/cleared counts, order changed yes/no, transforms changed yes/no).",
-        "All diagnostic strings are in English.",
-        "Diagnostics do not include any user media bytes or personal content—only counts/booleans/slot indices."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/lib/mediaDiagnostics.ts",
-          "operation": "create",
-          "description": "Create a small diagnostics helper to emit structured, English-only logs with a fixed shape for (1) app-start render state and (2) submit-success commit summary; ensure payload includes only counts/booleans/slot indices and no media bytes or user content."
-        },
-        {
-          "path": "frontend/src/context/MediaStoreContext.tsx",
-          "operation": "modify",
-          "description": "Emit exactly one structured diagnostics log on app start after the committed render state is established (hero/images/videos/song counts, image order length/order, transform count, and render source description)."
-        },
         {
           "path": "frontend/src/components/MediaManager.tsx",
           "operation": "modify",
-          "description": "On successful Submit, emit exactly one structured diagnostics log summarizing what was committed (uploaded/cleared counts by media type, order changed yes/no, transforms changed yes/no) using the shared diagnostics helper."
+          "description": "Add concise English helper text near image upload controls explaining the system file picker may show device gallery/Photos or Google Drive options depending on the device, and explicitly stating no separate Google Drive login is required in the app. Verify the component's usage instructions before implementing."
         }
       ]
     }

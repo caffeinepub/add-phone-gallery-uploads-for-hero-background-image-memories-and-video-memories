@@ -42,7 +42,7 @@ function translateBackendError(error: unknown): { title: string; message: string
   if (errorMessage.includes('Unauthorized') || errorMessage.includes('Only admins')) {
     return {
       title: 'Permission Denied',
-      message: 'You do not have permission to publish media. Please ensure you are logged in as an administrator.',
+      message: 'You do not have permission to perform this action. Administrator access is required.',
       details: errorMessage,
     };
   }

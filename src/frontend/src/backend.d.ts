@@ -70,12 +70,16 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCurrentVersion(): Promise<VersionInfo | null>;
+    getImageUploaderAllowlist(): Promise<Array<Principal>>;
     getPublishedMedia(): Promise<PublishedMedia>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getVersion(version: string): Promise<VersionInfo | null>;
+    grantImageUploaderAccess(user: Principal): Promise<void>;
+    hasImageUploaderAccess(user: Principal): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     prePublishCheck(config: PrePublishConfig): Promise<PrePublishResult>;
     recordDeployment(version: string, status: DeploymentStatus): Promise<void>;
+    revokeImageUploaderAccess(user: Principal): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setBackgroundSong(blob: ExternalBlob): Promise<void>;
     setHeroBackground(blob: ExternalBlob): Promise<void>;
