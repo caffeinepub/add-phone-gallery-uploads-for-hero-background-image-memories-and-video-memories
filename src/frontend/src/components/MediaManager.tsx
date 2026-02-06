@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Image, Video, Trash2, X, Check, Save, Settings, Music, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, Image, Video, Trash2, X, Check, Save, Settings, Music, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, AlertCircle, CheckCircle2, Eye } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
 import { useMediaDraft } from '../hooks/useMediaDraft';
 import { usePublishWithPrecheck } from '../hooks/usePublishWithPrecheck';
@@ -558,8 +558,9 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
     );
   }
 
-  const currentHeroUrl = previewUrls.hero || heroBackgroundUrl;
-  const currentSongUrl = previewUrls.song || songUrl;
+  // Compute current preview values (draft or live)
+  const currentHeroUrl = draft.hero === 'clear' ? null : (previewUrls.hero || heroBackgroundUrl);
+  const currentSongUrl = draft.song === 'clear' ? null : (previewUrls.song || songUrl);
 
   const hasUploadOrClearChanges = draft.hero || draft.images.size > 0 || draft.videos.size > 0 || draft.song;
   const hasOrderChanges = JSON.stringify(draft.imageOrder) !== JSON.stringify(liveImageOrder);
@@ -692,13 +693,158 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
             </div>
           </Collapsible>
 
-          <Tabs defaultValue="images" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="preview" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="preview">
+                <Eye className="w-4 h-4 mr-1" />
+                Preview
+              </TabsTrigger>
               <TabsTrigger value="hero">Hero</TabsTrigger>
               <TabsTrigger value="images">Images ({imageUrls.size + previewUrls.images.size}/43)</TabsTrigger>
               <TabsTrigger value="videos">Videos ({videoUrls.size + previewUrls.videos.size}/6)</TabsTrigger>
               <TabsTrigger value="song">Song</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="preview" className="flex-1 mt-4 min-h-0">
+              <ScrollArea className="h-[500px] pr-4">
+                <div className="space-y-6">
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold text-rose-900 mb-2">Draft Preview</h3>
+                    <p className="text-sm text-rose-600">This is what will be published when you click Submit</p>
+                  </div>
+
+                  {/* Hero Preview */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                      <Image className="w-4 h-4" />
+                      Hero Background
+                    </h4>
+                    <div className="relative aspect-video max-w-md mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
+                      {currentHeroUrl ? (
+                        <img src={currentHeroUrl} alt="Hero preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-rose-300">
+                          <div className="text-center">
+                            <Image className="w-12 h-12 mx-auto mb-2" />
+                            <p className="text-sm">Default placeholder</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Images Preview */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                      <Image className="w-4 h-4" />
+                      Image Memories ({draft.imageOrder.filter(idx => {
+                        const draftFile = draft.images.get(idx);
+                        return draftFile !== 'clear' && (previewUrls.images.has(idx) || imageUrls.has(idx));
+                      }).length}/43)
+                    </h4>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {draft.imageOrder.slice(0, 12).map((slotIndex) => {
+                        const draftFile = draft.images.get(slotIndex);
+                        const previewUrl = previewUrls.images.get(slotIndex);
+                        const isCleared = draftFile === 'clear';
+                        const hasImage = !isCleared && (imageUrls.has(slotIndex) || previewUrl);
+                        const imageUrl = previewUrl || imageUrls.get(slotIndex);
+                        const transform = draft.imageTransforms.get(slotIndex);
+
+                        return (
+                          <div key={slotIndex} className="relative aspect-square rounded border border-rose-200 bg-rose-50 overflow-hidden">
+                            {hasImage && imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={`Preview ${slotIndex}`}
+                                className="w-full h-full object-cover"
+                                style={
+                                  transform
+                                    ? {
+                                        transform: `scale(${transform.zoom}) translate(${transform.x / transform.zoom}px, ${transform.y / transform.zoom}px)`,
+                                        transformOrigin: 'center center',
+                                      }
+                                    : undefined
+                                }
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-rose-300">
+                                <Image className="w-4 h-4" />
+                              </div>
+                            )}
+                            <div className="absolute top-0.5 left-0.5 bg-rose-900/80 text-white text-[10px] px-1 rounded">
+                              #{slotIndex}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">Showing first 12 images in draft order</p>
+                  </div>
+
+                  {/* Videos Preview */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                      <Video className="w-4 h-4" />
+                      Video Memories ({Array.from({ length: 6 }, (_, i) => i + 1).filter(idx => {
+                        const draftFile = draft.videos.get(idx);
+                        return draftFile !== 'clear' && (previewUrls.videos.has(idx) || videoUrls.has(idx));
+                      }).length}/6)
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => {
+                        const draftFile = draft.videos.get(slotIndex);
+                        const previewUrl = previewUrls.videos.get(slotIndex);
+                        const isCleared = draftFile === 'clear';
+                        const hasVideo = !isCleared && (videoUrls.has(slotIndex) || previewUrl);
+                        const videoUrl = previewUrl || videoUrls.get(slotIndex);
+
+                        return (
+                          <div key={slotIndex} className="relative aspect-[9/16] rounded border border-rose-200 bg-rose-50 overflow-hidden">
+                            {hasVideo && videoUrl ? (
+                              <video src={videoUrl} className="w-full h-full object-cover" muted playsInline />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-rose-300">
+                                <Video className="w-4 h-4" />
+                              </div>
+                            )}
+                            <div className="absolute top-0.5 left-0.5 bg-rose-900/80 text-white text-[10px] px-1 rounded">
+                              #{slotIndex}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Song Preview */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
+                      <Music className="w-4 h-4" />
+                      Background Song
+                    </h4>
+                    <div className="max-w-md mx-auto rounded-lg border-2 border-rose-200 bg-rose-50 p-4">
+                      {currentSongUrl ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center text-rose-600">
+                            <Music className="w-12 h-12" />
+                          </div>
+                          <audio src={currentSongUrl} controls className="w-full" />
+                          <p className="text-center text-sm text-rose-700 font-medium">Custom song</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center text-rose-300">
+                            <Music className="w-12 h-12" />
+                          </div>
+                          <p className="text-center text-sm text-rose-600">Default song will play</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
 
             <TabsContent value="hero" className="flex-1 mt-4">
               <div className="space-y-4">

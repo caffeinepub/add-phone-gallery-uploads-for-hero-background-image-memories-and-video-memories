@@ -1,14 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Make published/preview mode reliably load and display the hero background, image slots, video slots, and background song from the backend after Media Manager Submit.
+**Goal:** Fix media rendering and audio playback in preview and live modes, add a clear draft preview in the Media Manager, and clarify the Hero Media button label.
 
 **Planned changes:**
-- Implement real backend persistence for published media in the Motoko single-actor canister, with getPublishedMedia() returning published hero background, images (up to 43), videos (up to 6), and song, including proper nulls for cleared slots.
-- Add explicit backend APIs to publish/replace and clear hero background, per image slot, per video slot, and background song; update the frontend submit/publish flow to use these APIs (instead of the current no-op placeholder) and surface English errors on publish failure.
-- Fix frontend publishedMediaClient.fetchPublishedMedia() mapping/URL construction so it correctly interprets the backend PublishedMedia shape and produces stable renderable URLs for hero/images/videos/song in published/preview mode.
-- Ensure MediaStoreContext rehydration in published/preview mode falls back to backend-published media when local IndexedDB media is absent, while keeping local media precedence when present.
-- Update the Media Manager Submit flow so the UI reflects submitted/published media immediately (including image order and transforms) without requiring a refresh, in both draft and published preview workflows.
-- Add lightweight production-focused diagnostics: exactly one structured English console log on app start and exactly one structured English console log per Submit summarizing uploads/clears and whether order/transforms changed.
+- Ensure Hero background, Image Memory slots, Video Memory slots, and background song render correctly in both preview and live/production by using current MediaStore state with fallback to backend-published media when local browser media is absent.
+- Add a Media Manager “Preview” section that shows staged draft Hero/Image/Video/Song selections immediately (including placeholder display for cleared draft slots) before publishing.
+- Restore reliable background audio playback in preview and live modes, including uploaded songs, with a clear tap-to-play path when autoplay is blocked and without hardcoding MP3-only sources.
+- Update the Hero section entry-point button label to “Media” (not “Edit”) across screen sizes, keeping the icon and an accessible English aria-label.
+- Make “clear” actions reliably remove media references so placeholders appear immediately after Submit and remain cleared after reload (no reappearing stale local URLs).
 
-**User-visible outcome:** After uploading and submitting media, the published/preview experience shows the correct hero background, images, videos, and song reliably (even on a fresh browser session), and failures show an English error instead of silently succeeding.
+**User-visible outcome:** Uploaded or published hero/images/videos/song consistently appear in preview and live modes; users can preview draft media before publishing, play the background song reliably (with a clear tap-to-start prompt if needed), see a clearly labeled “Media” button, and clear media so placeholders show immediately and persist after reload.

@@ -1,75 +1,69 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-06T01:51:36.285Z",
+  "generatedAt": "2026-02-06T02:10:52.151Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 6,
+    "total": 5,
     "implemented": 5,
     "items": [
       {
-        "id": "REQ-36",
-        "summary": "Implement real backend persistence for published media so that images, videos, hero background, and background song that are submitted in the Media Manager are stored in the Motoko canister (single actor) and returned by getPublishedMedia() in published/preview mode.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-37",
-        "summary": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/lib/publishedMediaClient.ts",
-          "frontend/src/hooks/usePublishWithPrecheck.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/lib/publishedMediaClient.ts",
-          "frontend/src/hooks/usePublishWithPrecheck.ts"
-        ]
-      },
-      {
-        "id": "REQ-38",
-        "summary": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/lib/publishedMediaClient.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/lib/publishedMediaClient.ts"
-        ]
-      },
-      {
-        "id": "REQ-39",
-        "summary": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
+        "id": "REQ-42",
+        "summary": "Ensure uploaded/published media is visible in both the app's preview experience and the live/production experience: Hero background, all Image Memory slots, all Video Memory slots, and the background song must render using the current MediaStore state and must correctly fall back to backend-published media when local IndexedDB media is absent.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/context/MediaStoreContext.tsx",
-          "frontend/src/lib/publishedMediaClient.ts"
+          "frontend/src/lib/publishedMediaClient.ts",
+          "frontend/src/components/HeroSection.tsx",
+          "frontend/src/components/ImageMemorySection.tsx",
+          "frontend/src/components/VideoMemorySection.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/lib/publishedMediaClient.ts"
+          "frontend/src/context/MediaStoreContext.tsx",
+          "frontend/src/components/HeroSection.tsx"
         ]
       },
       {
-        "id": "REQ-40",
-        "summary": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
+        "id": "REQ-43",
+        "summary": "Add an explicit, user-friendly pre-publish preview inside the Media Manager that lets the user confirm what they uploaded for Hero, Images, Videos, and Song before publishing, and make sure the preview uses the staged draft values (not only the currently published/live values).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "frontend/src/context/MediaStoreContext.tsx",
           "frontend/src/components/MediaManager.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/usePublishWithPrecheck.ts",
           "frontend/src/components/MediaManager.tsx"
         ]
       },
       {
-        "id": "REQ-41",
-        "summary": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
+        "id": "REQ-44",
+        "summary": "Fix background audio playback so the user can reliably hear the song in both preview and live/production modes, including when the user uploads a custom song; ensure playback works across common mobile browsers where autoplay may be blocked.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/MusicPlayer.tsx",
+          "frontend/src/components/MediaManager.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/MusicPlayer.tsx",
+          "frontend/src/components/MediaManager.tsx"
+        ]
+      },
+      {
+        "id": "REQ-45",
+        "summary": "Update the Hero section Media entry-point button to remove the confusing \"Edit\" label and show a clear, consistent label in English on all screen sizes (keep the icon).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/HeroSection.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/HeroSection.tsx"
+        ]
+      },
+      {
+        "id": "REQ-46",
+        "summary": "Ensure 'clear' actions are easy to understand and reliably remove media references so the UI falls back to placeholders (Hero, individual image slots, individual video slots, and song) in both preview and live views after Submit.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/components/MediaManager.tsx",
@@ -78,25 +72,20 @@
         ],
         "matchedFiles": [
           "frontend/src/components/MediaManager.tsx",
-          "frontend/src/hooks/usePublishWithPrecheck.ts"
+          "frontend/src/context/MediaStoreContext.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
+    "frontend/src/components/HeroSection.tsx",
     "frontend/src/components/MediaManager.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/usePublishWithPrecheck.ts",
-    "frontend/src/lib/publishedMediaClient.ts",
+    "frontend/src/components/MusicPlayer.tsx",
+    "frontend/src/context/MediaStoreContext.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

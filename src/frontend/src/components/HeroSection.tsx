@@ -33,8 +33,7 @@ export default function HeroSection({ onOpenMediaManager }: HeroSectionProps) {
             aria-label="Manage Hero background, Images, Videos, and Song"
           >
             <Upload className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Media</span>
-            <span className="sm:hidden">Edit</span>
+            <span>Media</span>
           </Button>
         </div>
       )}

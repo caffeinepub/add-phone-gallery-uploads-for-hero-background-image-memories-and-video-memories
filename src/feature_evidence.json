@@ -2,11 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-explicit-backend-apis-for-publishing-and-clearing-media-per-type-slot-hero-background-index-0-images-index-1-43-videos-index-1-6-background-song-index-0-and-wire-them-so-frontend-publishing-no-longer-calls-the-current-no-op-publishmedia-placeholder",
-      "featureTitle": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
+      "featureId": "feature-ensure-uploaded-published-media-is-visible-in-both-the-app-s-preview-experience-and-the-live-production-experience-hero-background-all-image-memory-slots-all-video-memory-slots-and-the-background-song-must-render-using-the-current-mediastore-state-and-must-correctly-fall-back-to-backend-published-media-when-local-indexeddb-media-is-absent",
+      "featureTitle": "Ensure uploaded/published media is visible in both the app's preview experience and the live/production experience: Hero background, all Image Memory slots, all Video Memory slots, and the background song must render using the current MediaStore state and must correctly fall back to backend-published media when local IndexedDB media is absent.",
       "files": [
-        "frontend/src/hooks/usePublishWithPrecheck.ts",
-        "frontend/src/lib/publishedMediaClient.ts"
+        "frontend/src/components/HeroSection.tsx",
+        "frontend/src/context/MediaStoreContext.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -18,15 +18,15 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-37"
+        "REQ-42"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-fix-publishedmediaclient-fetchpublishedmedia-mapping-so-it-correctly-interprets-the-backend-publishedmedia-shape-including-tuple-fields-and-optional-slots-and-produces-stable-renderable-urls-for-hero-images-videos-and-song-in-published-preview-mode",
-      "featureTitle": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
+      "featureId": "feature-add-an-explicit-user-friendly-pre-publish-preview-inside-the-media-manager-that-lets-the-user-confirm-what-they-uploaded-for-hero-images-videos-and-song-before-publishing-and-make-sure-the-preview-uses-the-staged-draft-values-not-only-the-currently-published-live-values",
+      "featureTitle": "Add an explicit, user-friendly pre-publish preview inside the Media Manager that lets the user confirm what they uploaded for Hero, Images, Videos, and Song before publishing, and make sure the preview uses the staged draft values (not only the currently published/live values).",
       "files": [
-        "frontend/src/lib/publishedMediaClient.ts"
+        "frontend/src/components/MediaManager.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -38,36 +38,16 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-38"
+        "REQ-43"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-mediastorecontext-startup-rehydration-in-published-preview-mode-correctly-falls-back-to-backend-published-media-when-local-indexeddb-media-is-absent-typical-on-a-new-origin-and-that-this-backend-fallback-applies-to-hero-background-all-image-slots-all-video-slots-and-the-background-song",
-      "featureTitle": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
-      "files": [
-        "frontend/src/lib/publishedMediaClient.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-39"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-media-manager-submit-publish-flow-to-guarantee-that-after-submit-completes-successfully-the-live-ui-immediately-reflects-the-submitted-media-hero-background-image-grid-in-the-chosen-order-with-transforms-video-grid-and-song-without-requiring-a-refresh-in-both-draft-and-published-preview-workflows",
-      "featureTitle": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
+      "featureId": "feature-fix-background-audio-playback-so-the-user-can-reliably-hear-the-song-in-both-preview-and-live-production-modes-including-when-the-user-uploads-a-custom-song-ensure-playback-works-across-common-mobile-browsers-where-autoplay-may-be-blocked",
+      "featureTitle": "Fix background audio playback so the user can reliably hear the song in both preview and live/production modes, including when the user uploads a custom song; ensure playback works across common mobile browsers where autoplay may be blocked.",
       "files": [
         "frontend/src/components/MediaManager.tsx",
-        "frontend/src/hooks/usePublishWithPrecheck.ts"
+        "frontend/src/components/MusicPlayer.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -79,16 +59,15 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-40"
+        "REQ-44"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-lightweight-production-focused-diagnostics-to-make-it-easy-to-verify-why-media-is-missing-in-published-preview-mode-including-one-structured-console-log-on-app-start-already-present-and-one-structured-console-log-per-submit-that-includes-counts-of-uploaded-cleared-items-and-whether-order-transforms-changed",
-      "featureTitle": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
+      "featureId": "feature-update-the-hero-section-media-entry-point-button-to-remove-the-confusing-edit-label-and-show-a-clear-consistent-label-in-english-on-all-screen-sizes-keep-the-icon",
+      "featureTitle": "Update the Hero section Media entry-point button to remove the confusing \"Edit\" label and show a clear, consistent label in English on all screen sizes (keep the icon).",
       "files": [
-        "frontend/src/components/MediaManager.tsx",
-        "frontend/src/hooks/usePublishWithPrecheck.ts"
+        "frontend/src/components/HeroSection.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -100,7 +79,28 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-41"
+        "REQ-45"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-clear-actions-are-easy-to-understand-and-reliably-remove-media-references-so-the-ui-falls-back-to-placeholders-hero-individual-image-slots-individual-video-slots-and-song-in-both-preview-and-live-views-after-submit",
+      "featureTitle": "Ensure 'clear' actions are easy to understand and reliably remove media references so the UI falls back to placeholders (Hero, individual image slots, individual video slots, and song) in both preview and live views after Submit.",
+      "files": [
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/context/MediaStoreContext.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-46"
       ],
       "confidence": "high"
     }

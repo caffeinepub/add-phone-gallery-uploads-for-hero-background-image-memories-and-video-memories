@@ -34,6 +34,7 @@ interface MediaStoreContextValue {
     imageOrder: number[];
     imageTransforms: Map<number, ImageTransform>;
   }) => Promise<void>;
+  refreshFromBackend: () => Promise<void>;
 }
 
 const MediaStoreContext = createContext<MediaStoreContextValue | null>(null);
@@ -214,6 +215,44 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
       console.error('Failed to load media:', error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function refreshFromBackend() {
+    if (!actor) return;
+    
+    try {
+      const backendMedia = await fetchPublishedMedia(actor);
+      
+      // Clean up old blob URLs before replacing with backend URLs
+      if (heroBackgroundUrl && blobUrlsRef.current.has(heroBackgroundUrl)) {
+        URL.revokeObjectURL(heroBackgroundUrl);
+        blobUrlsRef.current.delete(heroBackgroundUrl);
+      }
+      imageUrls.forEach((url) => {
+        if (blobUrlsRef.current.has(url)) {
+          URL.revokeObjectURL(url);
+          blobUrlsRef.current.delete(url);
+        }
+      });
+      videoUrls.forEach((url) => {
+        if (blobUrlsRef.current.has(url)) {
+          URL.revokeObjectURL(url);
+          blobUrlsRef.current.delete(url);
+        }
+      });
+      if (songUrl && blobUrlsRef.current.has(songUrl)) {
+        URL.revokeObjectURL(songUrl);
+        blobUrlsRef.current.delete(songUrl);
+      }
+
+      // Update state with backend URLs
+      setHeroBackgroundUrl(backendMedia.heroUrl);
+      setImageUrls(backendMedia.imageUrls);
+      setVideoUrls(backendMedia.videoUrls);
+      setSongUrl(backendMedia.songUrl);
+    } catch (error) {
+      console.error('Failed to refresh from backend:', error);
     }
   }
 
@@ -524,67 +563,8 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
         await saveMedia('song', 0, changes.song);
       }
 
-      // Step 2: Re-read persisted blobs and update live state atomically
-      
-      // Clean up old blob URLs
-      if (heroBackgroundUrl && blobUrlsRef.current.has(heroBackgroundUrl)) {
-        URL.revokeObjectURL(heroBackgroundUrl);
-        blobUrlsRef.current.delete(heroBackgroundUrl);
-      }
-      imageUrls.forEach((url) => {
-        if (blobUrlsRef.current.has(url)) {
-          URL.revokeObjectURL(url);
-          blobUrlsRef.current.delete(url);
-        }
-      });
-      videoUrls.forEach((url) => {
-        if (blobUrlsRef.current.has(url)) {
-          URL.revokeObjectURL(url);
-          blobUrlsRef.current.delete(url);
-        }
-      });
-      if (songUrl && blobUrlsRef.current.has(songUrl)) {
-        URL.revokeObjectURL(songUrl);
-        blobUrlsRef.current.delete(songUrl);
-      }
-
-      // Re-read hero from IndexedDB
-      const heroBlob = await getAllMediaOfType('hero');
-      const newHeroUrl = heroBlob.has(0) ? URL.createObjectURL(heroBlob.get(0)!) : null;
-      if (newHeroUrl) blobUrlsRef.current.add(newHeroUrl);
-
-      // Re-read images from IndexedDB
-      const imageBlobs = await getAllMediaOfType('image');
-      const newImageUrls = new Map<number, string>();
-      imageBlobs.forEach((blob, index) => {
-        if (index >= 1 && index <= 43) {
-          const url = URL.createObjectURL(blob);
-          newImageUrls.set(index, url);
-          blobUrlsRef.current.add(url);
-        }
-      });
-
-      // Re-read videos from IndexedDB
-      const videoBlobs = await getAllMediaOfType('video');
-      const newVideoUrls = new Map<number, string>();
-      videoBlobs.forEach((blob, index) => {
-        if (index >= 1 && index <= 6) {
-          const url = URL.createObjectURL(blob);
-          newVideoUrls.set(index, url);
-          blobUrlsRef.current.add(url);
-        }
-      });
-
-      // Re-read song from IndexedDB
-      const songBlob = await getAllMediaOfType('song');
-      const newSongUrl = songBlob.has(0) ? URL.createObjectURL(songBlob.get(0)!) : null;
-      if (newSongUrl) blobUrlsRef.current.add(newSongUrl);
-
-      // Update all state atomically
-      setHeroBackgroundUrl(newHeroUrl);
-      setImageUrls(newImageUrls);
-      setVideoUrls(newVideoUrls);
-      setSongUrl(newSongUrl);
+      // Step 2: Refresh from backend to get published URLs
+      await refreshFromBackend();
 
       // Update order and transforms
       updateImageOrder(changes.imageOrder);
@@ -621,6 +601,7 @@ export function MediaStoreProvider({ children }: { children: ReactNode }) {
         updateImageOrder,
         updateImageTransforms,
         batchPublish,
+        refreshFromBackend,
       }}
     >
       {children}
