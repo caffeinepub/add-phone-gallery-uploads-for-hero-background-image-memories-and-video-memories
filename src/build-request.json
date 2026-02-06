@@ -1,70 +1,132 @@
 {
   "kind": "build_request",
-  "title": "Fix production publish/deployment so the latest draft can be published successfully",
+  "title": "Fix published/preview mode so uploaded images, videos, and song load from backend reliably",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-25",
-      "text": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
+      "id": "REQ-36",
+      "text": "Implement real backend persistence for published media so that images, videos, hero background, and background song that are submitted in the Media Manager are stored in the Motoko canister (single actor) and returned by getPublishedMedia() in published/preview mode.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "recent-messages"
+        ],
+        "quotes": [
+          "It's not showing the images when I click on preview but in draft it's showing the images in image section ... it's not showing any images ... Hero section and video section and ... listen the song also",
+          "Fix it again"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Calling backend.getPublishedMedia() after a successful Media Manager Submit returns non-null heroBackground/backgroundSong when provided and returns arrays containing the published image/video slots that were uploaded (up to 43 images and 6 videos).",
+        "Clearing a slot via the Submit flow results in that slot returning null from getPublishedMedia() so the frontend falls back to placeholder media for that slot.",
+        "Backend enforces existing admin authorization for publish/clear operations and does not relax permissions."
+      ]
+    },
+    {
+      "id": "REQ-37",
+      "text": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
       "target": "both",
       "source": {
         "messageIds": [
           "recent-messages"
         ],
         "quotes": [
-          "🙏 Production launch failed: Deployment error",
-          "User: \"Publish the draft\""
+          "Draft mode shows uploaded images/videos, but after publishing the live/production version does not display the uploaded media",
+          "Fix it again"
         ]
       },
       "acceptanceCriteria": [
-        "Running the standard production publish/deploy flow completes successfully without a deployment error.",
-        "The deployed production app loads successfully and renders the main experience UI (lock screen → intro → hero/memories)."
+        "Backend exposes shared methods to (a) publish/replace a hero background, (b) publish/replace a single image slot, (c) publish/replace a single video slot, (d) publish/replace the background song, and (e) clear each of those targets.",
+        "Frontend publishMediaToBackend(...) uses these new APIs to upload exactly the staged draft deltas (uploads and clears) instead of calling actor.publishMedia() with no payload.",
+        "If the backend publish step fails, the frontend shows an English error message and does not silently report success."
       ]
     },
     {
-      "id": "REQ-26",
-      "text": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
-      "target": "unknown",
+      "id": "REQ-38",
+      "text": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
+      "target": "frontend",
       "source": {
         "messageIds": [
           "recent-messages"
         ],
         "quotes": [
-          "🙏 Production launch failed: Deployment error"
+          "it's not showing any images ... Hero section and video section ... listen the song"
         ]
       },
       "acceptanceCriteria": [
-        "On a failing deploy, logs include the underlying tool/command error and a clear indication of which step failed (build frontend, build canisters, deploy).",
-        "User-facing text (if any) is in English."
+        "When getPublishedMedia() contains a published hero background, at least one image, at least one video, and/or a song, fetchPublishedMedia() returns non-null heroUrl/songUrl and Maps containing the expected slot indices for images/videos.",
+        "The frontend no longer shows pink/blank placeholders due to URL construction/mapping errors when backend media exists.",
+        "Console errors related to 'Failed to fetch published media' are not emitted during normal successful published-mode loads."
       ]
     },
     {
-      "id": "REQ-27",
-      "text": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
-      "target": "unknown",
+      "id": "REQ-39",
+      "text": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
+      "target": "frontend",
       "source": {
         "messageIds": [
           "recent-messages"
         ],
         "quotes": [
-          "🚀 Going live with draft Version 11, now deploying to production...",
-          "🙏 Production launch failed: Deployment error"
+          "in draft it's showing ... but when I click on the ... it's not showing any images ... background images of Hero section and video section ... listen the song"
         ]
       },
       "acceptanceCriteria": [
-        "A pre-publish check can be run locally/CI and fails fast with a clear English error message when a required build/deploy prerequisite is not met.",
-        "When all pre-publish checks pass, the subsequent production deploy succeeds using the same workflow."
+        "On a fresh browser session with empty IndexedDB/localStorage, the app loads published media from the backend and displays hero background, images, videos, and song (if they were published).",
+        "When local IndexedDB media exists, local media continues to take precedence for fast preview, with backend as fallback only for missing items.",
+        "The one-time startup diagnostic log clearly reports counts for local vs backend vs merged media in English."
+      ]
+    },
+    {
+      "id": "REQ-40",
+      "text": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-messages"
+        ],
+        "quotes": [
+          "Your draft is working. Your published version is still NOT loading your images, videos, or song.",
+          "Fix it again"
+        ]
+      },
+      "acceptanceCriteria": [
+        "After clicking Submit, the Image Memory section immediately renders all uploaded/replaced images according to the submitted imageOrder and saved per-slot transforms, without requiring a reload.",
+        "After clicking Submit, the Video Memory section immediately renders all uploaded/replaced videos without requiring a reload.",
+        "After clicking Submit, MusicPlayer uses the newly submitted song (or falls back to /song.mp3 when cleared) and can be played via the existing play button.",
+        "The dialog closes only after backend publish (if applicable) and local apply succeed, and any user-facing failure text is in English."
+      ]
+    },
+    {
+      "id": "REQ-41",
+      "text": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-messages"
+        ],
+        "quotes": [
+          "make it clear don't go on the updating draft so make it clear as it as possible"
+        ]
+      },
+      "acceptanceCriteria": [
+        "On app start, exactly one English console log summarizes local vs backend availability and merged results (hero/images/videos/song).",
+        "On each Submit, exactly one English console log summarizes: hero action, image upload count, image clear count, video upload count, video clear count, song action, and whether imageOrder/transforms changed.",
+        "No user-facing UI copy is added in any language other than English."
       ]
     }
   ],
   "constraints": [
-    "Respect the single-actor backend architecture (all Motoko logic in backend/main.mo).",
-    "Do not edit files under frontend/src/components/ui or any paths listed as immutable (frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui).",
-    "Use English for any user-facing text."
+    "Respect the single-actor Motoko backend architecture; keep all backend logic in backend/main.mo.",
+    "Only add backend state migration (backend/migration.mo) if the published media state layout changes in a way that requires upgrade handling.",
+    "Do not edit any files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
+    "All user-facing text must be in English."
   ],
   "nonGoals": [
-    "Adding new product features to the app UI unrelated to publishing/deployment.",
-    "Changing the existing Media Manager behavior unless required to resolve the production deployment failure."
+    "Adding third-party storage/CDN for media files.",
+    "Adding real-time features (WebSockets) or external databases.",
+    "Changing Internet Identity authentication behavior beyond what is required for media publishing authorization.",
+    "Redesigning the overall app experience beyond fixing published/preview media loading and related diagnostics."
   ],
   "imageRequirements": {
     "required": [],

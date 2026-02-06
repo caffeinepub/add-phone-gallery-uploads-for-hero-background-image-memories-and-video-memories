@@ -2,48 +2,69 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-identify-the-root-cause-of-the-production-publish-deployment-failure-and-implement-the-necessary-fixes-so-the-latest-draft-can-be-deployed-to-production-without-errors",
-      "featureTitle": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
+      "featureId": "feature-add-explicit-backend-apis-for-publishing-and-clearing-media-per-type-slot-hero-background-index-0-images-index-1-43-videos-index-1-6-background-song-index-0-and-wire-them-so-frontend-publishing-no-longer-calls-the-current-no-op-publishmedia-placeholder",
+      "featureTitle": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
       "files": [
-        "frontend/src/components/MediaManager.tsx",
         "frontend/src/hooks/usePublishWithPrecheck.ts",
-        "frontend/src/lib/deployDiagnostics.ts"
+        "frontend/src/lib/publishedMediaClient.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
         "shadcn-ui@1.0.0",
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-25"
+        "REQ-37"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-improve-deployment-failure-diagnostics-so-that-if-a-publish-deploy-fails-again-the-error-output-includes-the-actionable-underlying-cause-not-only-a-generic-deployment-error",
-      "featureTitle": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
+      "featureId": "feature-fix-publishedmediaclient-fetchpublishedmedia-mapping-so-it-correctly-interprets-the-backend-publishedmedia-shape-including-tuple-fields-and-optional-slots-and-produces-stable-renderable-urls-for-hero-images-videos-and-song-in-published-preview-mode",
+      "featureTitle": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
       "files": [
-        "frontend/src/components/MediaManager.tsx",
-        "frontend/src/hooks/usePublishWithPrecheck.ts",
-        "frontend/src/lib/deployDiagnostics.ts"
+        "frontend/src/lib/publishedMediaClient.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
         "shadcn-ui@1.0.0",
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-26"
+        "REQ-38"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-a-pre-publish-verification-step-to-the-deploy-workflow-to-catch-common-publish-blockers-before-attempting-production-deployment-e-g-frontend-build-failing-missing-required-artifacts-misconfigured-canister-deploy-settings",
-      "featureTitle": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
+      "featureId": "feature-ensure-mediastorecontext-startup-rehydration-in-published-preview-mode-correctly-falls-back-to-backend-published-media-when-local-indexeddb-media-is-absent-typical-on-a-new-origin-and-that-this-backend-fallback-applies-to-hero-background-all-image-slots-all-video-slots-and-the-background-song",
+      "featureTitle": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
+      "files": [
+        "frontend/src/lib/publishedMediaClient.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-39"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-media-manager-submit-publish-flow-to-guarantee-that-after-submit-completes-successfully-the-live-ui-immediately-reflects-the-submitted-media-hero-background-image-grid-in-the-chosen-order-with-transforms-video-grid-and-song-without-requiring-a-refresh-in-both-draft-and-published-preview-workflows",
+      "featureTitle": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
       "files": [
         "frontend/src/components/MediaManager.tsx",
         "frontend/src/hooks/usePublishWithPrecheck.ts"
@@ -53,10 +74,33 @@
         "shadcn-ui@1.0.0",
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-27"
+        "REQ-40"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-lightweight-production-focused-diagnostics-to-make-it-easy-to-verify-why-media-is-missing-in-published-preview-mode-including-one-structured-console-log-on-app-start-already-present-and-one-structured-console-log-per-submit-that-includes-counts-of-uploaded-cleared-items-and-whether-order-transforms-changed",
+      "featureTitle": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
+      "files": [
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/hooks/usePublishWithPrecheck.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-41"
       ],
       "confidence": "high"
     }

@@ -1,56 +1,84 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T17:16:10.495Z",
+  "generatedAt": "2026-02-06T01:51:36.285Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 6,
+    "implemented": 5,
     "items": [
       {
-        "id": "REQ-25",
-        "summary": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
+        "id": "REQ-36",
+        "summary": "Implement real backend persistence for published media so that images, videos, hero background, and background song that are submitted in the Media Manager are stored in the Motoko canister (single actor) and returned by getPublishedMedia() in published/preview mode.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-37",
+        "summary": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/MediaManager.tsx",
-          "frontend/src/lib/deployDiagnostics.ts",
+          "frontend/src/lib/publishedMediaClient.ts",
           "frontend/src/hooks/usePublishWithPrecheck.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/MediaManager.tsx",
-          "frontend/src/lib/deployDiagnostics.ts",
+          "frontend/src/lib/publishedMediaClient.ts",
           "frontend/src/hooks/usePublishWithPrecheck.ts"
         ]
       },
       {
-        "id": "REQ-26",
-        "summary": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
+        "id": "REQ-38",
+        "summary": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/deployDiagnostics.ts",
+          "frontend/src/lib/publishedMediaClient.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/publishedMediaClient.ts"
+        ]
+      },
+      {
+        "id": "REQ-39",
+        "summary": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/context/MediaStoreContext.tsx",
+          "frontend/src/lib/publishedMediaClient.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/publishedMediaClient.ts"
+        ]
+      },
+      {
+        "id": "REQ-40",
+        "summary": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
+        "status": "implemented",
+        "plannedFiles": [
           "frontend/src/hooks/usePublishWithPrecheck.ts",
+          "frontend/src/context/MediaStoreContext.tsx",
           "frontend/src/components/MediaManager.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/lib/deployDiagnostics.ts",
           "frontend/src/hooks/usePublishWithPrecheck.ts",
           "frontend/src/components/MediaManager.tsx"
         ]
       },
       {
-        "id": "REQ-27",
-        "summary": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
+        "id": "REQ-41",
+        "summary": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
         "status": "implemented",
         "plannedFiles": [
+          "frontend/src/components/MediaManager.tsx",
           "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "frontend/src/components/MediaManager.tsx"
+          "frontend/src/context/MediaStoreContext.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "frontend/src/components/MediaManager.tsx"
+          "frontend/src/components/MediaManager.tsx",
+          "frontend/src/hooks/usePublishWithPrecheck.ts"
         ]
       }
     ]
@@ -68,7 +96,7 @@
     "frontend/src/declarations/backend.did.d.ts",
     "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/usePublishWithPrecheck.ts",
-    "frontend/src/lib/deployDiagnostics.ts",
+    "frontend/src/lib/publishedMediaClient.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

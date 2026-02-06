@@ -223,36 +223,6 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
   async function handleSubmit() {
     setIsClosingAfterSubmit(true);
 
-    const heroAction = draft.hero === 'clear' ? 'clear' : draft.hero instanceof File ? 'upload' : 'none';
-    const imageUploads = Array.from(draft.images.values()).filter((v) => v instanceof File).length;
-    const imageClears = Array.from(draft.images.values()).filter((v) => v === 'clear').length;
-    const videoUploads = Array.from(draft.videos.values()).filter((v) => v instanceof File).length;
-    const videoClears = Array.from(draft.videos.values()).filter((v) => v === 'clear').length;
-    const songAction = draft.song === 'clear' ? 'clear' : draft.song instanceof File ? 'upload' : 'none';
-    const orderChanged = JSON.stringify(draft.imageOrder) !== JSON.stringify(liveImageOrder);
-    const transformsChanged = (() => {
-      if (draft.imageTransforms.size !== liveImageTransforms.size) return true;
-      for (const [key, value] of draft.imageTransforms.entries()) {
-        const liveValue = liveImageTransforms.get(key);
-        if (!liveValue || 
-            liveValue.zoom !== value.zoom || 
-            liveValue.x !== value.x || 
-            liveValue.y !== value.y) {
-          return true;
-        }
-      }
-      return false;
-    })();
-
-    console.log('📤 Media Manager Submit:', {
-      hero: heroAction,
-      images: { uploads: imageUploads, clears: imageClears },
-      videos: { uploads: videoUploads, clears: videoClears },
-      song: songAction,
-      orderChanged,
-      transformsChanged,
-    });
-
     const result = await publish({
       hero: draft.hero === null ? undefined : draft.hero,
       images: draft.images,
@@ -272,7 +242,7 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
       resetDraft(draft.imageOrder, draft.imageTransforms);
       setPreviewUrls({ hero: null, images: new Map(), videos: new Map(), song: null });
     } else {
-      // Keep dialog open on failure so user can see error
+      // Keep dialog open on failure so user can see error and retry
       setIsClosingAfterSubmit(false);
     }
   }

@@ -8,6 +8,22 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  'method' : IDL.Text,
+  'blob_hash' : IDL.Text,
+});
+export const _CaffeineStorageRefillInformation = IDL.Record({
+  'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+});
+export const _CaffeineStorageRefillResult = IDL.Record({
+  'success' : IDL.Opt(IDL.Bool),
+  'topped_up_amount' : IDL.Opt(IDL.Nat),
+});
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
 export const DeploymentFailure = IDL.Record({
   'message' : IDL.Text,
   'details' : IDL.Opt(IDL.Text),
@@ -19,6 +35,14 @@ export const DeploymentStatus = IDL.Variant({
 export const VersionInfo = IDL.Record({
   'status' : DeploymentStatus,
   'version' : IDL.Text,
+});
+export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const PublishedMedia = IDL.Record({
+  'backgroundSong' : IDL.Opt(ExternalBlob),
+  'heroBackground' : IDL.Opt(ExternalBlob),
+  'videos' : IDL.Vec(IDL.Opt(IDL.Tuple(IDL.Text, ExternalBlob))),
+  'images' : IDL.Vec(IDL.Opt(IDL.Tuple(IDL.Text, ExternalBlob))),
 });
 export const PrePublishConfig = IDL.Record({
   'missingArtifacts' : IDL.Bool,
@@ -35,20 +59,83 @@ export const PrePublishResult = IDL.Variant({
 });
 
 export const idlService = IDL.Service({
+  '_caffeineStorageBlobIsLive' : IDL.Func(
+      [IDL.Vec(IDL.Nat8)],
+      [IDL.Bool],
+      ['query'],
+    ),
+  '_caffeineStorageBlobsToDelete' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [],
+      [],
+    ),
+  '_caffeineStorageCreateCertificate' : IDL.Func(
+      [IDL.Text],
+      [_CaffeineStorageCreateCertificateResult],
+      [],
+    ),
+  '_caffeineStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_CaffeineStorageRefillInformation)],
+      [_CaffeineStorageRefillResult],
+      [],
+    ),
+  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'clearAllPublishedMedia' : IDL.Func([], [], []),
+  'clearBackgroundSong' : IDL.Func([], [], []),
+  'clearHeroBackground' : IDL.Func([], [], []),
+  'clearImage' : IDL.Func([IDL.Nat], [], []),
+  'clearVideo' : IDL.Func([IDL.Nat], [], []),
   'getAllVersions' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(IDL.Text, VersionInfo))],
       ['query'],
     ),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCurrentVersion' : IDL.Func([], [IDL.Opt(VersionInfo)], ['query']),
+  'getPublishedMedia' : IDL.Func([], [PublishedMedia], ['query']),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
   'getVersion' : IDL.Func([IDL.Text], [IDL.Opt(VersionInfo)], ['query']),
+  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'prePublishCheck' : IDL.Func([PrePublishConfig], [PrePublishResult], []),
   'recordDeployment' : IDL.Func([IDL.Text, DeploymentStatus], [], []),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'setBackgroundSong' : IDL.Func([ExternalBlob], [], []),
+  'setHeroBackground' : IDL.Func([ExternalBlob], [], []),
+  'setImage' : IDL.Func([IDL.Nat, IDL.Text, ExternalBlob], [], []),
+  'setVideo' : IDL.Func([IDL.Nat, IDL.Text, ExternalBlob], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+    'method' : IDL.Text,
+    'blob_hash' : IDL.Text,
+  });
+  const _CaffeineStorageRefillInformation = IDL.Record({
+    'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+  });
+  const _CaffeineStorageRefillResult = IDL.Record({
+    'success' : IDL.Opt(IDL.Bool),
+    'topped_up_amount' : IDL.Opt(IDL.Nat),
+  });
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const DeploymentFailure = IDL.Record({
     'message' : IDL.Text,
     'details' : IDL.Opt(IDL.Text),
@@ -60,6 +147,14 @@ export const idlFactory = ({ IDL }) => {
   const VersionInfo = IDL.Record({
     'status' : DeploymentStatus,
     'version' : IDL.Text,
+  });
+  const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const PublishedMedia = IDL.Record({
+    'backgroundSong' : IDL.Opt(ExternalBlob),
+    'heroBackground' : IDL.Opt(ExternalBlob),
+    'videos' : IDL.Vec(IDL.Opt(IDL.Tuple(IDL.Text, ExternalBlob))),
+    'images' : IDL.Vec(IDL.Opt(IDL.Tuple(IDL.Text, ExternalBlob))),
   });
   const PrePublishConfig = IDL.Record({
     'missingArtifacts' : IDL.Bool,
@@ -76,15 +171,62 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
+    '_caffeineStorageBlobIsLive' : IDL.Func(
+        [IDL.Vec(IDL.Nat8)],
+        [IDL.Bool],
+        ['query'],
+      ),
+    '_caffeineStorageBlobsToDelete' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [],
+        [],
+      ),
+    '_caffeineStorageCreateCertificate' : IDL.Func(
+        [IDL.Text],
+        [_CaffeineStorageCreateCertificateResult],
+        [],
+      ),
+    '_caffeineStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_CaffeineStorageRefillInformation)],
+        [_CaffeineStorageRefillResult],
+        [],
+      ),
+    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'clearAllPublishedMedia' : IDL.Func([], [], []),
+    'clearBackgroundSong' : IDL.Func([], [], []),
+    'clearHeroBackground' : IDL.Func([], [], []),
+    'clearImage' : IDL.Func([IDL.Nat], [], []),
+    'clearVideo' : IDL.Func([IDL.Nat], [], []),
     'getAllVersions' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(IDL.Text, VersionInfo))],
         ['query'],
       ),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCurrentVersion' : IDL.Func([], [IDL.Opt(VersionInfo)], ['query']),
+    'getPublishedMedia' : IDL.Func([], [PublishedMedia], ['query']),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
     'getVersion' : IDL.Func([IDL.Text], [IDL.Opt(VersionInfo)], ['query']),
+    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'prePublishCheck' : IDL.Func([PrePublishConfig], [PrePublishResult], []),
     'recordDeployment' : IDL.Func([IDL.Text, DeploymentStatus], [], []),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'setBackgroundSong' : IDL.Func([ExternalBlob], [], []),
+    'setHeroBackground' : IDL.Func([ExternalBlob], [], []),
+    'setImage' : IDL.Func([IDL.Nat, IDL.Text, ExternalBlob], [], []),
+    'setVideo' : IDL.Func([IDL.Nat, IDL.Text, ExternalBlob], [], []),
   });
 };
 

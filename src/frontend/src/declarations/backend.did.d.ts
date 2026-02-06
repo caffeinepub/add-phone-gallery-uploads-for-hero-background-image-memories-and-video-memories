@@ -16,6 +16,7 @@ export interface DeploymentFailure {
 }
 export type DeploymentStatus = { 'failure' : DeploymentFailure } |
   { 'success' : string };
+export type ExternalBlob = Uint8Array;
 export interface PrePublishConfig {
   'missingArtifacts' : boolean,
   'misconfiguredCanister' : boolean,
@@ -27,13 +28,66 @@ export interface PrePublishFailure {
 }
 export type PrePublishResult = { 'failed' : PrePublishFailure } |
   { 'passed' : null };
+export interface PublishedMedia {
+  'backgroundSong' : [] | [ExternalBlob],
+  'heroBackground' : [] | [ExternalBlob],
+  'videos' : Array<[] | [[string, ExternalBlob]]>,
+  'images' : Array<[] | [[string, ExternalBlob]]>,
+}
+export interface UserProfile { 'name' : string }
+export type UserRole = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface VersionInfo { 'status' : DeploymentStatus, 'version' : string }
+export interface _CaffeineStorageCreateCertificateResult {
+  'method' : string,
+  'blob_hash' : string,
+}
+export interface _CaffeineStorageRefillInformation {
+  'proposed_top_up_amount' : [] | [bigint],
+}
+export interface _CaffeineStorageRefillResult {
+  'success' : [] | [boolean],
+  'topped_up_amount' : [] | [bigint],
+}
 export interface _SERVICE {
+  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
+  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+    [Array<Uint8Array>],
+    undefined
+  >,
+  '_caffeineStorageCreateCertificate' : ActorMethod<
+    [string],
+    _CaffeineStorageCreateCertificateResult
+  >,
+  '_caffeineStorageRefillCashier' : ActorMethod<
+    [[] | [_CaffeineStorageRefillInformation]],
+    _CaffeineStorageRefillResult
+  >,
+  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
+  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'clearAllPublishedMedia' : ActorMethod<[], undefined>,
+  'clearBackgroundSong' : ActorMethod<[], undefined>,
+  'clearHeroBackground' : ActorMethod<[], undefined>,
+  'clearImage' : ActorMethod<[bigint], undefined>,
+  'clearVideo' : ActorMethod<[bigint], undefined>,
   'getAllVersions' : ActorMethod<[], Array<[string, VersionInfo]>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCurrentVersion' : ActorMethod<[], [] | [VersionInfo]>,
+  'getPublishedMedia' : ActorMethod<[], PublishedMedia>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getVersion' : ActorMethod<[string], [] | [VersionInfo]>,
+  'isCallerAdmin' : ActorMethod<[], boolean>,
   'prePublishCheck' : ActorMethod<[PrePublishConfig], PrePublishResult>,
   'recordDeployment' : ActorMethod<[string, DeploymentStatus], undefined>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'setBackgroundSong' : ActorMethod<[ExternalBlob], undefined>,
+  'setHeroBackground' : ActorMethod<[ExternalBlob], undefined>,
+  'setImage' : ActorMethod<[bigint, string, ExternalBlob], undefined>,
+  'setVideo' : ActorMethod<[bigint, string, ExternalBlob], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

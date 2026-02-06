@@ -1,11 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the production publish/deployment flow so the latest draft can be deployed successfully, with clearer diagnostics and a pre-publish verification step.
+**Goal:** Make published/preview mode reliably load and display the hero background, image slots, video slots, and background song from the backend after Media Manager Submit.
 
 **Planned changes:**
-- Identify and fix the root cause of the production publish/deployment failure so the standard deploy flow completes without errors.
-- Improve deploy failure diagnostics to surface the underlying tool/command error and clearly indicate which step failed (frontend build, canister build, deploy).
-- Add a pre-publish verification step that can be run locally/CI to fail fast on common deployment blockers (e.g., frontend build issues, missing artifacts, misconfigured deploy/canister settings).
+- Implement real backend persistence for published media in the Motoko single-actor canister, with getPublishedMedia() returning published hero background, images (up to 43), videos (up to 6), and song, including proper nulls for cleared slots.
+- Add explicit backend APIs to publish/replace and clear hero background, per image slot, per video slot, and background song; update the frontend submit/publish flow to use these APIs (instead of the current no-op placeholder) and surface English errors on publish failure.
+- Fix frontend publishedMediaClient.fetchPublishedMedia() mapping/URL construction so it correctly interprets the backend PublishedMedia shape and produces stable renderable URLs for hero/images/videos/song in published/preview mode.
+- Ensure MediaStoreContext rehydration in published/preview mode falls back to backend-published media when local IndexedDB media is absent, while keeping local media precedence when present.
+- Update the Media Manager Submit flow so the UI reflects submitted/published media immediately (including image order and transforms) without requiring a refresh, in both draft and published preview workflows.
+- Add lightweight production-focused diagnostics: exactly one structured English console log on app start and exactly one structured English console log per Submit summarizing uploads/clears and whether order/transforms changed.
 
-**User-visible outcome:** Publishing the latest draft to production succeeds and the deployed app loads and renders the main experience UI (lock screen → intro → hero/memories), with clearer English error output if deployment fails.
+**User-visible outcome:** After uploading and submitting media, the published/preview experience shows the correct hero background, images, videos, and song reliably (even on a fresh browser session), and failures show an English error instead of silently succeeding.

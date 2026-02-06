@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 27,
+  "projectStateVersion": 33,
   "summary": "ICP canister dapp scaffolded with a Motoko backend and a React + Tailwind (shadcn/ui) frontend for an interactive romantic/“surprise” experience, including Internet Identity login gating, configurable memory sections (images/videos), popups (love letter/proposal), and animated visual effects, packaged with build/deploy templates for IC.",
   "architectural_notes": [
     "Frontend uses React + Vite with TailwindCSS and shadcn/ui component set.",
@@ -17,9 +17,11 @@
     "Uploaded/replaced images are not visible in the Image Memory section after using the media add/replace flow (no visible result).",
     "Image Memory section shows a pink blank page/popup instead of displaying the uploaded image(s).",
     "Clicking an uploaded image should show the configured popup message, but currently shows a pink/blank popup instead.",
-    "Production deployment/publish of the latest draft fails with a deployment error."
+    "Production deployment/publish of the latest draft fails with a deployment error.",
+    "Draft mode shows uploaded images/videos, but after publishing the live/production version does not display the uploaded media (appears blank/pink or missing).",
+    "Published/production mode still does not display uploaded images/videos or the uploaded background song (only the Hero background image shows), indicating media persistence/rehydration mismatch between draft and published builds."
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "IF-1",
@@ -337,6 +339,102 @@
         "REQ-27"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-media-manager-publish-submit-flow-so-that-after-the-user-clicks-submit-all-uploaded-replaced-images-and-videos-remain-visible-immediately-in-the-live-app-image-memory-section-and-video-memory-section-without-requiring-a-refresh-and-without-falling-back-to-pink-blank-placeholders",
+      "title": "Fix the Media Manager publish/submit flow so that after the user clicks Submit, all uploaded/replaced images and videos remain visible immediately in the live app (Image Memory section and Video Memory section) without requiring a refresh, and without falling back to pink/blank placeholders.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-mediastorecontext-persistence-and-rehydration-are-correct-so-that-media-published-via-submit-is-still-visible-after-a-full-page-reload-using-the-existing-local-persistence-mechanism-and-that-the-app-does-not-accidentally-drop-media-due-to-key-index-mismatches-or-incomplete-rehydration",
+      "title": "Ensure MediaStoreContext persistence and rehydration are correct so that media published via Submit is still visible after a full page reload (using the existing local persistence mechanism), and that the app does not accidentally drop media due to key/index mismatches or incomplete rehydration.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-lightweight-diagnostics-for-the-publish-action-to-make-it-easy-to-confirm-what-was-applied-when-the-user-clicks-submit-and-make-sure-any-user-facing-error-text-shown-in-the-ui-is-in-english",
+      "title": "Add lightweight diagnostics for the publish action to make it easy to confirm what was applied when the user clicks Submit, and make sure any user-facing error text shown in the UI is in English.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-production-safe-persistence-for-uploaded-media-hero-background-43-image-slots-6-video-slots-and-background-song-so-that-media-published-via-the-media-manager-is-available-in-the-published-production-app-not-only-in-the-draft-app",
+      "title": "Implement production-safe persistence for uploaded media (hero background, 43 image slots, 6 video slots, and background song) so that media published via the Media Manager is available in the published/production app, not only in the draft app.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-frontend-publish-submit-flow-so-that-clicking-submit-uploads-the-staged-media-changes-uploads-and-clears-to-the-backend-as-the-source-of-truth-for-the-published-app-while-keeping-immediate-in-app-updates-after-submit",
+      "title": "Update the frontend publish/submit flow so that clicking Submit uploads the staged media changes (uploads and clears) to the backend as the source of truth for the published app, while keeping immediate in-app updates after Submit.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-mediastorecontext-startup-rehydration-logic-so-the-app-loads-media-in-this-order-1-browser-local-persisted-media-indexeddb-for-fast-local-preview-if-present-then-2-backend-published-media-as-a-fallback-when-local-media-is-absent-typical-in-published-production-on-a-new-origin-otherwise-3-existing-static-placeholder-paths",
+      "title": "Update MediaStoreContext startup/rehydration logic so the app loads media in this order: (1) browser-local persisted media (IndexedDB) for fast local preview if present, then (2) backend-published media as a fallback when local media is absent (typical in published/production on a new origin), otherwise (3) existing static placeholder paths.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-lightweight-english-diagnostics-for-production-media-loading-to-help-confirm-why-media-is-missing-e-g-log-one-structured-console-message-on-app-start-with-counts-of-locally-found-vs-backend-found-hero-images-videos-song",
+      "title": "Add lightweight, English diagnostics for production media loading to help confirm why media is missing (e.g., log one structured console message on app start with counts of locally-found vs backend-found hero/images/videos/song).",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-explicit-backend-apis-for-publishing-and-clearing-media-per-type-slot-hero-background-index-0-images-index-1-43-videos-index-1-6-background-song-index-0-and-wire-them-so-frontend-publishing-no-longer-calls-the-current-no-op-publishmedia-placeholder",
+      "title": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-publishedmediaclient-fetchpublishedmedia-mapping-so-it-correctly-interprets-the-backend-publishedmedia-shape-including-tuple-fields-and-optional-slots-and-produces-stable-renderable-urls-for-hero-images-videos-and-song-in-published-preview-mode",
+      "title": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-mediastorecontext-startup-rehydration-in-published-preview-mode-correctly-falls-back-to-backend-published-media-when-local-indexeddb-media-is-absent-typical-on-a-new-origin-and-that-this-backend-fallback-applies-to-hero-background-all-image-slots-all-video-slots-and-the-background-song",
+      "title": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-media-manager-submit-publish-flow-to-guarantee-that-after-submit-completes-successfully-the-live-ui-immediately-reflects-the-submitted-media-hero-background-image-grid-in-the-chosen-order-with-transforms-video-grid-and-song-without-requiring-a-refresh-in-both-draft-and-published-preview-workflows",
+      "title": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-lightweight-production-focused-diagnostics-to-make-it-easy-to-verify-why-media-is-missing-in-published-preview-mode-including-one-structured-console-log-on-app-start-already-present-and-one-structured-console-log-per-submit-that-includes-counts-of-uploaded-cleared-items-and-whether-order-transforms-changed",
+      "title": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -380,6 +478,22 @@
       "id": "AR-7",
       "summary": "Add support for managing video audio: allow videos with/without original voice and let user add/replace a song/background audio track after uploading (via Media Manager).",
       "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Extend the Motoko backend (single actor) to store and serve published media blobs by type and slot index, including support for clearing slots and retrieving the current published set for app startup.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Implement real backend persistence for published media so that images, videos, hero background, and background song that are submitted in the Media Manager are stored in the Motoko canister (single actor) and returned by getPublishedMedia() in published/preview mode.",
+      "reqIds": [
+        "REQ-36"
+      ],
       "status": "pending"
     }
   ],

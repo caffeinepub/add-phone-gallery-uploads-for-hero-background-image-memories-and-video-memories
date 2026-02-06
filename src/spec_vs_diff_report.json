@@ -1,70 +1,75 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T17:16:10.491Z",
-  "summary": "The diff primarily adds a frontend-side “publish with precheck” flow plus a diagnostics utility, and adds backend endpoints for prePublishCheck and deployment recording/version tracking. However, the diff does not show any changes to the actual production build/deploy pipeline (scripts/config) needed to fix the root cause of a production deployment failure, nor does it add deploy-step diagnostics (build frontend / build canisters / deploy) at the workflow level.",
+  "generatedAt": "2026-02-06T01:51:36.281Z",
+  "summary": "Diff implements backend persistent storage for published media with per-slot publish APIs, adds a migration to normalize published media array lengths, and updates frontend publishing to call the new backend per-slot APIs. Diff also updates frontend published-media mapping logic (partially shown). However, there is no clear evidence of the required published/preview startup rehydration fallback logic, nor the required structured diagnostics logs, and the submit-flow immediate UI refresh requirements are only partially evidenced.",
   "missing_requirements": [
     {
-      "id": "REQ-25",
-      "requirement": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
-      "reason": "No evidence in the diff summary of changes to the production deployment pipeline (e.g., deploy scripts, dfx config, canister settings, build artifacts) or a concrete fix to a stated root cause. Changes are focused on in-app publish/precheck and backend tracking, not on making the standard production deploy complete successfully.",
+      "id": "REQ-39",
+      "requirement": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent, and that this backend fallback applies to hero background, all image slots, all video slots, and the background song, with a one-time startup diagnostic log reporting counts.",
+      "reason": "The diff summary shows changes to MediaManager, usePublishWithPrecheck, and publishedMediaClient, but does not show any changes to the MediaStoreContext/MediaStoreProvider startup logic that would fetch backend published media and merge it as fallback when local media is missing.",
       "evidence": [
+        "frontend/src/components/MediaManager.tsx",
         "frontend/src/hooks/usePublishWithPrecheck.ts",
-        "backend/main.mo"
+        "frontend/src/lib/publishedMediaClient.ts",
+        "frontend-file-summaries.txt (no evidence of modified MediaStoreContext/Provider logic in diff)"
       ]
     },
     {
-      "id": "REQ-26",
-      "requirement": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
-      "reason": "Diagnostics were added for frontend publish operations and console logging, but there is no evidence of enhanced diagnostics for the actual deployment workflow steps (build frontend, build canisters, deploy) or surfacing underlying tool/command errors from those steps.",
+      "id": "REQ-41",
+      "requirement": "Add lightweight, production-focused diagnostics: exactly one structured English console log on app start summarizing local vs backend availability and merged results, and exactly one structured English console log per Submit summarizing counts/actions and whether imageOrder/transforms changed.",
+      "reason": "publishMediaToBackend adds a console.error on failure, but there is no evidence of the required single structured startup log nor the single structured per-Submit log with the specified fields.",
       "evidence": [
-        "frontend/src/lib/deployDiagnostics.ts",
-        "frontend/src/hooks/usePublishWithPrecheck.ts"
-      ]
-    },
-    {
-      "id": "REQ-27",
-      "requirement": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
-      "reason": "A precheck exists, but it is driven by a manually-constructed config with boolean flags (hard-coded false in publish, and UI-configurable in MediaManager) rather than performing real local/CI verification of build/artifacts/canister settings. Also, the diff does not show integration into an actual deploy workflow runnable in CI (e.g., scripts/commands).",
-      "evidence": [
+        "frontend/src/lib/publishedMediaClient.ts",
         "frontend/src/hooks/usePublishWithPrecheck.ts",
-        "backend/main.mo",
         "frontend/src/components/MediaManager.tsx"
+      ]
+    },
+    {
+      "id": "REQ-40",
+      "requirement": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, images in chosen order with transforms, videos, and song) without refresh, and the dialog closes only after backend publish (if applicable) and local apply succeed, with English failure text.",
+      "reason": "There is evidence that publishing runs backend upload then batchPublish to local store (which likely updates live state) and that dialog closes on status succeeded, but the diff snippet does not show the actual Submit handler, the exact ordering of close vs local apply, nor any user-facing English error message behavior in the MediaManager UI.",
+      "evidence": [
+        "frontend/src/hooks/usePublishWithPrecheck.ts",
+        "frontend/src/components/MediaManager.tsx (truncated; Submit handler not shown)"
+      ]
+    },
+    {
+      "id": "REQ-38",
+      "requirement": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode without emitting fetch errors during normal successful loads.",
+      "reason": "The diff shows partial mapping for images/videos using tuple indexing and getDirectURL(), but the file is truncated before heroUrl/songUrl mapping and overall error-handling guarantees can be verified.",
+      "evidence": [
+        "frontend/src/lib/publishedMediaClient.ts (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-37",
+      "requirement": "Backend exposes shared methods to publish/replace and clear hero background, image slot, video slot, background song; frontend uses these new APIs and shows an English error if backend publish fails.",
+      "reason": "Frontend publishMediaToBackend calls clearHeroBackground/clearImage/clearVideo/clearBackgroundSong and setHeroBackground/setImage/setVideo/setBackgroundSong, but backend/main.mo is truncated before clear* methods and full setVideo/setBackgroundSong definitions can be confirmed.",
+      "evidence": [
+        "frontend/src/lib/publishedMediaClient.ts",
+        "backend/main.mo (truncated)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Backend deployment/version tracking APIs (recordDeployment, getCurrentVersion, getVersion, getAllVersions) and in-memory publishedVersions store.",
-      "reason": "The BuildRequest asks to fix production publish/deployment failures and improve diagnostics/prechecks; it does not request adding deployment version history or tracking features in the backend.",
+      "description": "Pre-publish check configuration/UI state added to MediaManager (e.g., showing precheck config, error-details toggles) beyond the requested media published/preview reliability fixes and diagnostics requirements.",
+      "reason": "BuildRequest focuses on published/preview media persistence/loading/mapping and lightweight diagnostics; the diff adds additional UI/state for pre-publish configuration not explicitly requested.",
       "evidence": [
-        "backend/main.mo"
-      ]
-    },
-    {
-      "description": "UI-level precheck configuration controls inside MediaManager (e.g., toggles/state for frontendBuildFailed/missingArtifacts/misconfiguredCanister).",
-      "reason": "REQ-27 asks for a pre-publish verification step in the deploy workflow (local/CI) to catch blockers automatically; adding interactive UI controls to simulate failure states is not requested and may be considered an unrelated UI feature.",
-      "evidence": [
-        "frontend/src/components/MediaManager.tsx"
-      ]
-    },
-    {
-      "description": "Added backend/migration.mo and wired Migration.run into backend/main.mo.",
-      "reason": "No migration requirement is stated in the BuildRequest, and the migration stub does not obviously contribute to fixing production deployment or diagnostics based on the diff summary alone.",
-      "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo"
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/hooks/usePublishWithPrecheck.ts"
       ]
     }
   ],
-  "confidence": 0.74,
+  "confidence": 0.64,
   "changed_files": [
     "backend/main.mo",
     "backend/migration.mo",
     "frontend-file-summaries.txt",
     "frontend/src/components/MediaManager.tsx",
     "frontend/src/hooks/usePublishWithPrecheck.ts",
-    "frontend/src/lib/deployDiagnostics.ts",
+    "frontend/src/lib/publishedMediaClient.ts",
     "project_state.json"
   ]
 }

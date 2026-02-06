@@ -1,75 +1,116 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Stabilize publish/deploy flow with pre-checks and actionable diagnostics (frontend-only)",
+  "title": "Reliable published/preview media loading with correct backend publish wiring and diagnostics",
   "requirements": [
     {
-      "id": "REQ-25",
-      "summary": "Harden the in-app publish flow used for production drafts so failures surface actionable causes and do not leave the UI in a broken state after attempting to publish.",
+      "id": "REQ-37",
+      "summary": "Wire Media Manager publishing to the new per-slot backend media publish/clear capabilities (replace current no-op placeholder call) and surface publish failures to the user in English.",
       "acceptanceCriteria": [
-        "Running the standard production publish/deploy flow completes successfully without a deployment error.",
-        "The deployed production app loads successfully and renders the main experience UI (lock screen → intro → hero/memories)."
+        "Backend exposes shared methods to (a) publish/replace a hero background, (b) publish/replace a single image slot, (c) publish/replace a single video slot, (d) publish/replace the background song, and (e) clear each of those targets.",
+        "Frontend publishMediaToBackend(...) uses these new APIs to upload exactly the staged draft deltas (uploads and clears) instead of calling actor.publishMedia() with no payload.",
+        "If the backend publish step fails, the frontend shows an English error message and does not silently report success."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/MediaManager.tsx",
+          "path": "frontend/src/lib/publishedMediaClient.ts",
           "operation": "modify",
-          "description": "Add guarded publish execution that (1) runs a pre-publish verification before submitting and (2) captures and renders detailed failure information (including the underlying thrown error/cause chain) in English instead of only showing a generic alert. Ensure the Media Manager always resets loading state on failure so the rest of the UI (lock screen → intro → hero/memories) remains usable after an unsuccessful publish attempt. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/lib/deployDiagnostics.ts",
-          "operation": "create",
-          "description": "Create a small diagnostics utility to normalize unknown thrown values into a consistent, actionable error payload (message + optional details), including safe stringification and cause-chain extraction for logging and UI display. Ensure all user-facing strings are English."
+          "description": "Replace the publishMediaToBackend placeholder implementation with real calls to the backend actor’s per-type methods (setHeroBackground/setImage/setVideo/setBackgroundSong and clearHeroBackground/clearImage/clearVideo/clearBackgroundSong), uploading only changed draft deltas. Use the blob-storage ExternalBlob client to convert File bytes into ExternalBlob and to provide direct URLs; support per-file progress via ExternalBlob.withUploadProgress and route progress events through onProgress. Verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "operation": "create",
-          "description": "Create a hook that composes (a) the backend actor (via existing useActor) for prePublishCheck/recordDeployment and (b) the existing MediaStore batchPublish call, returning a single publish function and structured status (idle/running/succeeded/failed) for the UI. Ensure errors returned to UI are normalized via deployDiagnostics and are English."
+          "operation": "modify",
+          "description": "Ensure backend publish failures are normalized into an English diagnostic payload and returned as a failed PublishResult (so the Media Manager remains open and shows the error). Keep the publish flow sequencing (precheck → backend publish → local apply → record deployment) but rely on the updated publishMediaToBackend behavior (no actor.publishMedia placeholder)."
         }
       ]
     },
     {
-      "id": "REQ-26",
-      "summary": "Improve publish/deploy failure diagnostics by adding step-based logging and a user-visible error summary that identifies the failed step and underlying cause.",
+      "id": "REQ-38",
+      "summary": "Fix publishedMediaClient.fetchPublishedMedia() mapping to correctly interpret the backend PublishedMedia shape (tuples + optional slots) and return stable renderable URLs for hero, images, videos, and song in published/preview mode.",
       "acceptanceCriteria": [
-        "On a failing deploy, logs include the underlying tool/command error and a clear indication of which step failed (build frontend, build canisters, deploy).",
-        "User-facing text (if any) is in English."
+        "When getPublishedMedia() contains a published hero background, at least one image, at least one video, and/or a song, fetchPublishedMedia() returns non-null heroUrl/songUrl and Maps containing the expected slot indices for images/videos.",
+        "The frontend no longer shows pink/blank placeholders due to URL construction/mapping errors when backend media exists.",
+        "Console errors related to 'Failed to fetch published media' are not emitted during normal successful published-mode loads."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/deployDiagnostics.ts",
+          "path": "frontend/src/lib/publishedMediaClient.ts",
           "operation": "modify",
-          "description": "Extend diagnostics normalization to support step tagging (e.g., 'pre-publish check', 'persist draft', 'record deployment') and produce a concise 'failed step' summary plus expandable details for console logs and UI rendering. Ensure the output is safe to log (no circular JSON crashes) and all user-facing strings are English."
-        },
-        {
-          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "operation": "modify",
-          "description": "Instrument the workflow with clear, step-scoped console logs and error propagation so failures show which step failed and include the underlying error/cause. Map any backend-provided failure details into the structured diagnostics object for display/logging. Ensure all user-facing strings are English."
-        },
-        {
-          "path": "frontend/src/components/MediaManager.tsx",
-          "operation": "modify",
-          "description": "Replace the generic 'Failed to save changes' alert with an English, actionable message that includes which step failed and offers a 'Show details' area (or equivalent) containing the normalized diagnostics (including any backend failure details). Also ensure console output includes the same structured diagnostics. Verify the component's usage instructions before implementing."
+          "description": "Harden fetchPublishedMedia() to correctly handle the backend PublishedMedia fields (including tuple items like [name, ExternalBlob] and optional hero/song), tolerate undefined/null slots, and avoid throwing during normal mapping. Ensure image/video slot indices map consistently to UI indices (images 1–43, videos 1–6) and URLs are produced via ExternalBlob.getDirectURL(). Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-27",
-      "summary": "Add a pre-publish verification step to the publish workflow to fail fast with clear English errors before attempting production deployment/publish.",
+      "id": "REQ-39",
+      "summary": "Ensure MediaStoreContext startup rehydration in published/preview mode falls back to backend-published media when local IndexedDB is absent, while preserving local-first behavior when local media exists.",
       "acceptanceCriteria": [
-        "A pre-publish check can be run locally/CI and fails fast with a clear English error message when a required build/deploy prerequisite is not met.",
-        "When all pre-publish checks pass, the subsequent production deploy succeeds using the same workflow."
+        "On a fresh browser session with empty IndexedDB/localStorage, the app loads published media from the backend and displays hero background, images, videos, and song (if they were published).",
+        "When local IndexedDB media exists, local media continues to take precedence for fast preview, with backend as fallback only for missing items.",
+        "The one-time startup diagnostic log clearly reports counts for local vs backend vs merged media in English."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/context/MediaStoreContext.tsx",
+          "operation": "modify",
+          "description": "Adjust startup rehydration/merge logic to ensure backend-published media is used as a fallback for any missing local hero/image/video/song items (including the fully-empty-local case), without overriding locally available items. Ensure the one-time startup log remains exactly one structured English console log and accurately reports local/backend/merged counts."
+        },
+        {
+          "path": "frontend/src/lib/publishedMediaClient.ts",
+          "operation": "modify",
+          "description": "Align fetchPublishedMedia() return shape with MediaStoreContext’s fallback merge needs (heroUrl/songUrl nullable; imageUrls/videoUrls Maps keyed by slot index), so MediaStoreContext can reliably merge backend media into missing local slots without mapping inconsistencies. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-40",
+      "summary": "Update the Media Manager Submit/publish flow so the live UI immediately reflects submitted media (including order/transforms) without refresh, and the dialog closes only after successful backend publish (if applicable) and local apply.",
+      "acceptanceCriteria": [
+        "After clicking Submit, the Image Memory section immediately renders all uploaded/replaced images according to the submitted imageOrder and saved per-slot transforms, without requiring a reload.",
+        "After clicking Submit, the Video Memory section immediately renders all uploaded/replaced videos without requiring a reload.",
+        "After clicking Submit, MusicPlayer uses the newly submitted song (or falls back to /song.mp3 when cleared) and can be played via the existing play button.",
+        "The dialog closes only after backend publish (if applicable) and local apply succeed, and any user-facing failure text is in English."
       ],
       "file_operations": [
         {
           "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
           "operation": "modify",
-          "description": "Implement the pre-publish verification call using the backend actor’s prePublishCheck with a configurable PrePublishConfig (sourced from UI defaults) and return a failed result immediately (without calling batchPublish) when checks do not pass. Ensure failure reasons and details are surfaced in English and wrapped by deployDiagnostics."
+          "description": "Ensure the publish() promise only resolves success after both backend publish and MediaStoreContext.batchPublish (local apply + live state update) succeed; on any failure, return a failed PublishResult so MediaManager keeps the dialog open with English error details."
+        },
+        {
+          "path": "frontend/src/context/MediaStoreContext.tsx",
+          "operation": "modify",
+          "description": "Confirm batchPublish applies imageOrder and per-slot transforms atomically alongside media URL updates so ImageMemorySection/VideoMemorySection/HeroSection/MusicPlayer reflect changes immediately after Submit with no refresh."
         },
         {
           "path": "frontend/src/components/MediaManager.tsx",
           "operation": "modify",
-          "description": "Add a 'Pre-publish check' control and lightweight configuration UI (toggles mirroring PrePublishConfig) within the existing Media Manager dialog (no new routes). Run the check on demand and also automatically immediately before 'Submit'. If the check fails, block submit and show a clear English reason + details. Verify the component's usage instructions before implementing."
+          "description": "Keep the dialog-close behavior gated on the publish hook’s succeeded state, and ensure failure states do not close the dialog. Remove any duplicate success-side effects that could mask failures; keep all new/changed user-facing messages in English."
+        }
+      ]
+    },
+    {
+      "id": "REQ-41",
+      "summary": "Add lightweight production-focused diagnostics: exactly one structured console log on app start and exactly one structured console log per Submit summarizing media actions and whether order/transforms changed.",
+      "acceptanceCriteria": [
+        "On app start, exactly one English console log summarizes local vs backend availability and merged results (hero/images/videos/song).",
+        "On each Submit, exactly one English console log summarizes: hero action, image upload count, image clear count, video upload count, video clear count, song action, and whether imageOrder/transforms changed.",
+        "No user-facing UI copy is added in any language other than English."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/MediaManager.tsx",
+          "operation": "modify",
+          "description": "Remove the per-Submit console log from MediaManager to avoid duplicate Submit logs; rely on a single centralized structured log emitted by the publish hook. Ensure no other new user-facing copy is introduced except English."
+        },
+        {
+          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
+          "operation": "modify",
+          "description": "Emit exactly one structured English console log per Submit attempt that includes hero action, image/video upload+clear counts, song action, and whether imageOrder/transforms changed. Remove any additional publish-related console logs (e.g., 'Published to backend') to keep the per-Submit log count to exactly one."
+        },
+        {
+          "path": "frontend/src/context/MediaStoreContext.tsx",
+          "operation": "modify",
+          "description": "Ensure the app-start diagnostic remains exactly one structured English console log for media availability/merge (no additional startup logs added)."
         }
       ]
     }
