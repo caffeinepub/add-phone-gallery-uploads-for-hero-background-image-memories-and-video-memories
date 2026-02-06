@@ -1,0 +1,64 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-identify-the-root-cause-of-the-production-publish-deployment-failure-and-implement-the-necessary-fixes-so-the-latest-draft-can-be-deployed-to-production-without-errors",
+      "featureTitle": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
+      "files": [
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/hooks/usePublishWithPrecheck.ts",
+        "frontend/src/lib/deployDiagnostics.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-25"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-improve-deployment-failure-diagnostics-so-that-if-a-publish-deploy-fails-again-the-error-output-includes-the-actionable-underlying-cause-not-only-a-generic-deployment-error",
+      "featureTitle": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
+      "files": [
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/hooks/usePublishWithPrecheck.ts",
+        "frontend/src/lib/deployDiagnostics.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-26"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-pre-publish-verification-step-to-the-deploy-workflow-to-catch-common-publish-blockers-before-attempting-production-deployment-e-g-frontend-build-failing-missing-required-artifacts-misconfigured-canister-deploy-settings",
+      "featureTitle": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
+      "files": [
+        "frontend/src/components/MediaManager.tsx",
+        "frontend/src/hooks/usePublishWithPrecheck.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-27"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

@@ -1,2 +1,3 @@
-# add-phone-gallery-uploads-for-hero-background-image-memories-and-video-memories
-Exported from Caffeine project: Add phone-gallery uploads for hero background, image memories, and video memories
+## 
+
+To run app build and run docker image: `docker build -t app . docker run -it --network host app`

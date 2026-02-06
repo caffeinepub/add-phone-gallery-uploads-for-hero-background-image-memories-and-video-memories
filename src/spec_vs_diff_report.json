@@ -1,0 +1,70 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-05T17:16:10.491Z",
+  "summary": "The diff primarily adds a frontend-side “publish with precheck” flow plus a diagnostics utility, and adds backend endpoints for prePublishCheck and deployment recording/version tracking. However, the diff does not show any changes to the actual production build/deploy pipeline (scripts/config) needed to fix the root cause of a production deployment failure, nor does it add deploy-step diagnostics (build frontend / build canisters / deploy) at the workflow level.",
+  "missing_requirements": [
+    {
+      "id": "REQ-25",
+      "requirement": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
+      "reason": "No evidence in the diff summary of changes to the production deployment pipeline (e.g., deploy scripts, dfx config, canister settings, build artifacts) or a concrete fix to a stated root cause. Changes are focused on in-app publish/precheck and backend tracking, not on making the standard production deploy complete successfully.",
+      "evidence": [
+        "frontend/src/hooks/usePublishWithPrecheck.ts",
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-26",
+      "requirement": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
+      "reason": "Diagnostics were added for frontend publish operations and console logging, but there is no evidence of enhanced diagnostics for the actual deployment workflow steps (build frontend, build canisters, deploy) or surfacing underlying tool/command errors from those steps.",
+      "evidence": [
+        "frontend/src/lib/deployDiagnostics.ts",
+        "frontend/src/hooks/usePublishWithPrecheck.ts"
+      ]
+    },
+    {
+      "id": "REQ-27",
+      "requirement": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
+      "reason": "A precheck exists, but it is driven by a manually-constructed config with boolean flags (hard-coded false in publish, and UI-configurable in MediaManager) rather than performing real local/CI verification of build/artifacts/canister settings. Also, the diff does not show integration into an actual deploy workflow runnable in CI (e.g., scripts/commands).",
+      "evidence": [
+        "frontend/src/hooks/usePublishWithPrecheck.ts",
+        "backend/main.mo",
+        "frontend/src/components/MediaManager.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Backend deployment/version tracking APIs (recordDeployment, getCurrentVersion, getVersion, getAllVersions) and in-memory publishedVersions store.",
+      "reason": "The BuildRequest asks to fix production publish/deployment failures and improve diagnostics/prechecks; it does not request adding deployment version history or tracking features in the backend.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "description": "UI-level precheck configuration controls inside MediaManager (e.g., toggles/state for frontendBuildFailed/missingArtifacts/misconfiguredCanister).",
+      "reason": "REQ-27 asks for a pre-publish verification step in the deploy workflow (local/CI) to catch blockers automatically; adding interactive UI controls to simulate failure states is not requested and may be considered an unrelated UI feature.",
+      "evidence": [
+        "frontend/src/components/MediaManager.tsx"
+      ]
+    },
+    {
+      "description": "Added backend/migration.mo and wired Migration.run into backend/main.mo.",
+      "reason": "No migration requirement is stated in the BuildRequest, and the migration stub does not obviously contribute to fixing production deployment or diagnostics based on the diff summary alone.",
+      "evidence": [
+        "backend/migration.mo",
+        "backend/main.mo"
+      ]
+    }
+  ],
+  "confidence": 0.74,
+  "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/components/MediaManager.tsx",
+    "frontend/src/hooks/usePublishWithPrecheck.ts",
+    "frontend/src/lib/deployDiagnostics.ts",
+    "project_state.json"
+  ]
+}

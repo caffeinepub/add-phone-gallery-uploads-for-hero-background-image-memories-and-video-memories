@@ -1,0 +1,77 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Stabilize publish/deploy flow with pre-checks and actionable diagnostics (frontend-only)",
+  "requirements": [
+    {
+      "id": "REQ-25",
+      "summary": "Harden the in-app publish flow used for production drafts so failures surface actionable causes and do not leave the UI in a broken state after attempting to publish.",
+      "acceptanceCriteria": [
+        "Running the standard production publish/deploy flow completes successfully without a deployment error.",
+        "The deployed production app loads successfully and renders the main experience UI (lock screen → intro → hero/memories)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/MediaManager.tsx",
+          "operation": "modify",
+          "description": "Add guarded publish execution that (1) runs a pre-publish verification before submitting and (2) captures and renders detailed failure information (including the underlying thrown error/cause chain) in English instead of only showing a generic alert. Ensure the Media Manager always resets loading state on failure so the rest of the UI (lock screen → intro → hero/memories) remains usable after an unsuccessful publish attempt. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/lib/deployDiagnostics.ts",
+          "operation": "create",
+          "description": "Create a small diagnostics utility to normalize unknown thrown values into a consistent, actionable error payload (message + optional details), including safe stringification and cause-chain extraction for logging and UI display. Ensure all user-facing strings are English."
+        },
+        {
+          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
+          "operation": "create",
+          "description": "Create a hook that composes (a) the backend actor (via existing useActor) for prePublishCheck/recordDeployment and (b) the existing MediaStore batchPublish call, returning a single publish function and structured status (idle/running/succeeded/failed) for the UI. Ensure errors returned to UI are normalized via deployDiagnostics and are English."
+        }
+      ]
+    },
+    {
+      "id": "REQ-26",
+      "summary": "Improve publish/deploy failure diagnostics by adding step-based logging and a user-visible error summary that identifies the failed step and underlying cause.",
+      "acceptanceCriteria": [
+        "On a failing deploy, logs include the underlying tool/command error and a clear indication of which step failed (build frontend, build canisters, deploy).",
+        "User-facing text (if any) is in English."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/lib/deployDiagnostics.ts",
+          "operation": "modify",
+          "description": "Extend diagnostics normalization to support step tagging (e.g., 'pre-publish check', 'persist draft', 'record deployment') and produce a concise 'failed step' summary plus expandable details for console logs and UI rendering. Ensure the output is safe to log (no circular JSON crashes) and all user-facing strings are English."
+        },
+        {
+          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
+          "operation": "modify",
+          "description": "Instrument the workflow with clear, step-scoped console logs and error propagation so failures show which step failed and include the underlying error/cause. Map any backend-provided failure details into the structured diagnostics object for display/logging. Ensure all user-facing strings are English."
+        },
+        {
+          "path": "frontend/src/components/MediaManager.tsx",
+          "operation": "modify",
+          "description": "Replace the generic 'Failed to save changes' alert with an English, actionable message that includes which step failed and offers a 'Show details' area (or equivalent) containing the normalized diagnostics (including any backend failure details). Also ensure console output includes the same structured diagnostics. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-27",
+      "summary": "Add a pre-publish verification step to the publish workflow to fail fast with clear English errors before attempting production deployment/publish.",
+      "acceptanceCriteria": [
+        "A pre-publish check can be run locally/CI and fails fast with a clear English error message when a required build/deploy prerequisite is not met.",
+        "When all pre-publish checks pass, the subsequent production deploy succeeds using the same workflow."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
+          "operation": "modify",
+          "description": "Implement the pre-publish verification call using the backend actor’s prePublishCheck with a configurable PrePublishConfig (sourced from UI defaults) and return a failed result immediately (without calling batchPublish) when checks do not pass. Ensure failure reasons and details are surfaced in English and wrapped by deployDiagnostics."
+        },
+        {
+          "path": "frontend/src/components/MediaManager.tsx",
+          "operation": "modify",
+          "description": "Add a 'Pre-publish check' control and lightweight configuration UI (toggles mirroring PrePublishConfig) within the existing Media Manager dialog (no new routes). Run the check on demand and also automatically immediately before 'Submit'. If the check fails, block submit and show a clear English reason + details. Verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "build_request",
+  "title": "Fix production publish/deployment so the latest draft can be published successfully",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-25",
+      "text": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "recent-messages"
+        ],
+        "quotes": [
+          "🙏 Production launch failed: Deployment error",
+          "User: \"Publish the draft\""
+        ]
+      },
+      "acceptanceCriteria": [
+        "Running the standard production publish/deploy flow completes successfully without a deployment error.",
+        "The deployed production app loads successfully and renders the main experience UI (lock screen → intro → hero/memories)."
+      ]
+    },
+    {
+      "id": "REQ-26",
+      "text": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
+      "target": "unknown",
+      "source": {
+        "messageIds": [
+          "recent-messages"
+        ],
+        "quotes": [
+          "🙏 Production launch failed: Deployment error"
+        ]
+      },
+      "acceptanceCriteria": [
+        "On a failing deploy, logs include the underlying tool/command error and a clear indication of which step failed (build frontend, build canisters, deploy).",
+        "User-facing text (if any) is in English."
+      ]
+    },
+    {
+      "id": "REQ-27",
+      "text": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
+      "target": "unknown",
+      "source": {
+        "messageIds": [
+          "recent-messages"
+        ],
+        "quotes": [
+          "🚀 Going live with draft Version 11, now deploying to production...",
+          "🙏 Production launch failed: Deployment error"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A pre-publish check can be run locally/CI and fails fast with a clear English error message when a required build/deploy prerequisite is not met.",
+        "When all pre-publish checks pass, the subsequent production deploy succeeds using the same workflow."
+      ]
+    }
+  ],
+  "constraints": [
+    "Respect the single-actor backend architecture (all Motoko logic in backend/main.mo).",
+    "Do not edit files under frontend/src/components/ui or any paths listed as immutable (frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui).",
+    "Use English for any user-facing text."
+  ],
+  "nonGoals": [
+    "Adding new product features to the app UI unrelated to publishing/deployment.",
+    "Changing the existing Media Manager behavior unless required to resolve the production deployment failure."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}
