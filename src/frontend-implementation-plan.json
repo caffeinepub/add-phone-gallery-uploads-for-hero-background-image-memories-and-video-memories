@@ -1,46 +1,144 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Public image memory uploads via system file picker (gallery/Drive) in Media Manager",
+  "title": "Default hero background + autoplay looping music + memory grids and Media Manager UX refinements",
   "requirements": [
     {
-      "id": "REQ-63",
-      "summary": "Make Images editable for all visitors while keeping Hero/Videos/Song admin-only, and ensure non-admin submit only publishes image changes with English error handling.",
+      "id": "REQ-1",
+      "summary": "Use the bundled image as the Hero background by default when no published hero background exists, while allowing uploaded hero media to override it.",
       "acceptanceCriteria": [
-        "When not an admin, the Media Manager still shows lock messaging for Hero/Videos/Song, but the Images tab allows Upload/Replace/Adjust/Clear/Reorder and Submit.",
-        "The Images tab no longer shows 'Administrator or image uploader access required' for non-admin users.",
-        "The submit flow in non-admin mode publishes only image-related changes (no hero/video/song actions attempted), and errors (if any) are shown in English without closing the dialog."
+        "On a fresh load (no hero uploaded in the app), the Hero section background renders using the provided image.",
+        "If a hero background has been uploaded via the existing Media Manager flow, the uploaded hero background overrides the default image.",
+        "The image is bundled as a static frontend asset (not served via the backend)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useMediaManagerPermissions.ts",
+          "path": "frontend/src/components/HeroSection.tsx",
           "operation": "modify",
-          "description": "Update permissions computation so Images are editable for all visitors (including anonymous/guest), while Hero/Videos/Song remain admin-only; keep permission state and user-facing lock logic consistent with the new behavior. Verify the component's usage instructions before implementing."
+          "description": "Default the Hero background rendering to the bundled static asset when heroBackgroundUrl is null, and remove/avoid any empty-state overlay messaging that prevents the image from displaying immediately."
         },
         {
-          "path": "frontend/src/components/MediaManager.tsx",
+          "path": "frontend/src/context/MediaStoreContext.tsx",
           "operation": "modify",
-          "description": "Adjust Media Manager tab visibility/behavior so non-admins can still see Hero/Videos/Song sections with lock messaging (not hidden), while Images remains fully editable; update submit flow gating so non-admin submit publishes only image-related changes (no hero/video/song calls), and ensure all lock/permission copy is accurate and in English. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/usePublishWithPrecheck.ts",
-          "operation": "modify",
-          "description": "Update backend error translation messaging to reflect new authorization (remove/avoid image-uploader allowlist messaging), keeping all user-facing errors in clear English and ensuring failures do not close the dialog. Verify the component's usage instructions before implementing."
+          "description": "Ensure heroBackgroundUrl remains null when no published hero background exists (so HeroSection can deterministically fall back to the bundled default), and confirm uploaded/published hero backgrounds continue to override the default via committed backend media."
         }
       ]
     },
     {
-      "id": "REQ-64",
-      "summary": "Update Media Manager UI copy to clarify users can pick images from phone gallery or Google Drive via the device file picker without any Drive login inside the app.",
+      "id": "REQ-2",
+      "summary": "Enforce a mobile-friendly autoplay-muted, looping background music player that uses the published song and shows only a small bottom-right play/pause popup with a lightly visible audio element and no interaction prompts.",
       "acceptanceCriteria": [
-        "Media Manager includes a short, clear English instruction near image uploading controls, e.g., indicating that the upload picker may offer 'Photos' or 'Google Drive' depending on the device.",
-        "No UI implies a Google Drive OAuth/login integration or requires connecting a Drive account inside the app."
+        "When a song is present (songUrl exists), the audio element is configured for mobile-friendly autoplay behavior by starting muted and attempting playback automatically on page load.",
+        "Audio loops continuously.",
+        "A play/pause control is fixed at the bottom-right of the viewport and remains usable on mobile.",
+        "The <audio> element is lightly visible (not fully hidden) while still matching the popup style.",
+        "No “tap to start” or similar prompt is shown to the user."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/MusicPlayer.tsx",
+          "operation": "modify",
+          "description": "Remove any tap-to-start UI/prompt logic; configure the audio element to autoplay muted on mount when songUrl exists, loop continuously, and expose only a compact fixed bottom-right play/pause control; render the <audio> element with controls but styled to be lightly visible (reduced opacity/size) rather than hidden."
+        },
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Add/adjust global styles for the MusicPlayer popup and lightly visible audio element (e.g., small footprint and low opacity) to meet the 'audio tag must be shown lightly' requirement while keeping the UI as a small bottom-right popup."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Render the Image Memory section as a responsive 43-card grid driven by the existing slot order, with smooth 3D flip and fade-in message reveal plus rounded corners and soft shadow.",
+      "acceptanceCriteria": [
+        "The Image Memory section displays 43 slots by default in a grid layout that adapts from mobile to desktop.",
+        "Tapping/clicking a populated card flips/rotates in 3D and the message fades in on the back side.",
+        "Cards have rounded corners and a soft shadow in both front and back states.",
+        "Empty slots display an English empty-state message (existing behavior is acceptable)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/ImageMemorySection.tsx",
+          "operation": "modify",
+          "description": "Confirm the grid is driven by imageOrder with a default length of 43 and ensure responsive columns/gaps remain appropriate from mobile through desktop; keep English helper/empty-state text."
+        },
+        {
+          "path": "frontend/src/components/FlipImageCard.tsx",
+          "operation": "modify",
+          "description": "Ensure the flip interaction is smooth for both click and tap and that the back-side message reveal includes a clear fade-in on flip; keep rounded corners and shadow semantics consistent for both faces."
+        },
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Refine/confirm the flip-card CSS (3D perspective, rotate/transition timing, backface visibility) and ensure both front and back have rounded corners and a soft shadow; ensure the message fade-in animation is smooth."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Improve Media Manager working-mode per-slot controls for images (Add/Replace, Adjust, Reorder, Save/Submit) to be clear and mobile-friendly, and ensure updates reflect in the Image Memory grid after submit without refresh.",
+      "acceptanceCriteria": [
+        "For each image slot, the Media Manager UI exposes Add/Replace and Adjust controls without requiring hover.",
+        "Users can reorder image slots using drag-and-drop where supported and/or existing alternative controls for mobile.",
+        "After the user clicks the existing primary submit/save action in the Media Manager, the Image Memory grid reflects the changes without requiring a page refresh."
       ],
       "file_operations": [
         {
           "path": "frontend/src/components/MediaManager.tsx",
           "operation": "modify",
-          "description": "Add concise English helper text near image upload controls explaining the system file picker may show device gallery/Photos or Google Drive options depending on the device, and explicitly stating no separate Google Drive login is required in the app. Verify the component's usage instructions before implementing."
+          "description": "Make per-image-slot controls (Add/Replace, Adjust, Clear) visible without hover for both mobile and desktop; add explicit reorder controls (e.g., arrow buttons using existing moveImageSlot) as a mobile-friendly alternative to drag-and-drop; ensure the primary submit/save action remains prominent and that post-submit state reflects immediately."
+        },
+        {
+          "path": "frontend/src/hooks/useMediaDraft.ts",
+          "operation": "modify",
+          "description": "Adjust/extend draft reorder helpers if needed to support the Media Manager's non-drag mobile reordering controls deterministically across a 43-slot grid."
+        },
+        {
+          "path": "frontend/src/context/MediaStoreContext.tsx",
+          "operation": "modify",
+          "description": "Ensure batchPublish continues to refresh committed/published media after submitting (so the Image Memory grid updates immediately without a page refresh) and persists the latest image order/transforms."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Ensure the Video Memory section displays exactly 6 videos in a consistent aspect-ratio grid and maintains mobile-friendly playback (playsInline, looping, default-muted), with Media Manager add/replace support before publishing.",
+      "acceptanceCriteria": [
+        "The Video Memory section shows exactly 6 slots.",
+        "Uploaded videos render with consistent aspect ratio handling across the grid.",
+        "Videos can be added/replaced through the existing Media Manager flow and appear after submit/publish.",
+        "Videos remain mobile-friendly (playsInline) and loop continuously."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/VideoMemorySection.tsx",
+          "operation": "modify",
+          "description": "Confirm the section renders exactly 6 slots with consistent aspect ratio handling across breakpoints, and ensure playback stays mobile-friendly (playsInline), looping, and default-muted behavior remains intact."
+        },
+        {
+          "path": "frontend/src/components/MediaManager.tsx",
+          "operation": "modify",
+          "description": "Ensure video slot previews and uploaded video rendering use consistent aspect ratio handling and keep mobile-friendly playback attributes (playsInline, loop, default-muted) during preview and after publish."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Bundle the new hero background image as a static frontend asset under the generated assets directory and reference it consistently for the default hero background (no backend routing).",
+      "acceptanceCriteria": [
+        "The image file is stored under frontend/public/assets/generated and loaded via a static URL.",
+        "No backend API calls are required to display the default hero background."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/public/assets/generated/hero-bg.dim_736x964.png",
+          "operation": "create",
+          "description": "Add the generated hero background image asset at this exact path/filename so it is bundled and served statically by the frontend build."
+        },
+        {
+          "path": "frontend/src/components/HeroSection.tsx",
+          "operation": "modify",
+          "description": "Reference frontend/public/assets/generated/hero-bg.dim_736x964.png as the default background when no published hero background exists, ensuring it loads via a static URL and not through any backend calls."
         }
       ]
     }

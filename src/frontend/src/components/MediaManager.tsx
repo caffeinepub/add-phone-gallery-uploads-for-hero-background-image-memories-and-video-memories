@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Upload, Image, Video, Trash2, X, Check, Save, Settings, Music, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, AlertCircle, CheckCircle2, Eye, Lock, Info } from 'lucide-react';
+import { Upload, Image, Video, Trash2, X, Check, Save, Settings, Music, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, AlertCircle, CheckCircle2, Eye, Info } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
 import { useMediaDraft } from '../hooks/useMediaDraft';
 import { usePublishWithPrecheck } from '../hooks/usePublishWithPrecheck';
 import { useMediaManagerPermissions } from '../hooks/useMediaManagerPermissions';
-import { formatDiagnosticForUser } from '../lib/deployDiagnostics';
 import ImageAdjustModal from './ImageAdjustModal';
 import type { PrePublishConfig } from '../backend';
+import type { PublishChanges } from '../hooks/usePublishWithPrecheck';
 import {
   Dialog,
   DialogContent,
@@ -70,750 +70,206 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
     missingArtifacts: false,
     misconfiguredCanister: false,
   });
-  const [precheckResult, setPrecheckResult] = useState<'idle' | 'passed' | 'failed'>('idle');
-  const [showErrorDetails, setShowErrorDetails] = useState(false);
 
-  // Preview URLs for draft changes
-  const [previewUrls, setPreviewUrls] = useState<{
-    hero: string | null;
-    images: Map<number, string>;
-    videos: Map<number, string>;
-    song: string | null;
-  }>({
-    hero: null,
-    images: new Map(),
-    videos: new Map(),
-    song: null,
-  });
-
-  // Initialize draft from live state when dialog opens
+  // Reset draft when dialog opens
   useEffect(() => {
     if (open) {
       resetDraft(liveImageOrder, liveImageTransforms);
-      setPreviewUrls({ hero: null, images: new Map(), videos: new Map(), song: null });
-      setIsClosingAfterSubmit(false);
       resetPublish();
-      setPrecheckResult('idle');
-      setShowErrorDetails(false);
+      setIsClosingAfterSubmit(false);
     }
-  }, [open, liveImageOrder, liveImageTransforms, resetPublish]);
+  }, [open, liveImageOrder, liveImageTransforms]);
 
-  // Cleanup preview URLs when dialog closes or on unmount
-  useEffect(() => {
-    return () => {
-      if (previewUrls.hero) URL.revokeObjectURL(previewUrls.hero);
-      previewUrls.images.forEach((url) => URL.revokeObjectURL(url));
-      previewUrls.videos.forEach((url) => URL.revokeObjectURL(url));
-      if (previewUrls.song) URL.revokeObjectURL(previewUrls.song);
-    };
-  }, []);
-
-  // Close dialog on successful publish
+  // Close dialog after successful publish
   useEffect(() => {
     if (status === 'succeeded' && isClosingAfterSubmit) {
-      onClose();
+      const timer = setTimeout(() => {
+        onClose();
+      }, 1500);
+      return () => clearTimeout(timer);
     }
   }, [status, isClosingAfterSubmit, onClose]);
 
-  function handleHeroUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!permissions.canEditHero) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setHero(file);
-    
-    // Revoke previous preview URL if exists
-    setPreviewUrls((prev) => {
-      if (prev.hero) URL.revokeObjectURL(prev.hero);
-      return { ...prev, hero: URL.createObjectURL(file) };
-    });
-    e.target.value = '';
-  }
-
-  function handleImageUpload(slotIndex: number, file: File) {
-    if (!permissions.canEditImages) return;
-    setImage(slotIndex, file);
-    
-    // Revoke previous preview URL for this slot if exists
-    setPreviewUrls((prev) => {
-      const oldUrl = prev.images.get(slotIndex);
-      if (oldUrl) URL.revokeObjectURL(oldUrl);
-      
-      const newImages = new Map(prev.images);
-      newImages.set(slotIndex, URL.createObjectURL(file));
-      return { ...prev, images: newImages };
-    });
-  }
-
-  function handleVideoUpload(slotIndex: number, file: File) {
-    if (!permissions.canEditVideos) return;
-    setVideo(slotIndex, file);
-    
-    // Revoke previous preview URL for this slot if exists
-    setPreviewUrls((prev) => {
-      const oldUrl = prev.videos.get(slotIndex);
-      if (oldUrl) URL.revokeObjectURL(oldUrl);
-      
-      const newVideos = new Map(prev.videos);
-      newVideos.set(slotIndex, URL.createObjectURL(file));
-      return { ...prev, videos: newVideos };
-    });
-  }
-
-  function handleSongUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!permissions.canEditSong) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSong(file);
-    
-    // Revoke previous preview URL if exists
-    setPreviewUrls((prev) => {
-      if (prev.song) URL.revokeObjectURL(prev.song);
-      return { ...prev, song: URL.createObjectURL(file) };
-    });
-    e.target.value = '';
-  }
-
-  function handleClearHero() {
-    if (!permissions.canEditHero) return;
-    if (!confirm('Clear hero background? This will remove the uploaded background.')) return;
-    setHero('clear');
-    setPreviewUrls((prev) => {
-      if (prev.hero) URL.revokeObjectURL(prev.hero);
-      return { ...prev, hero: null };
-    });
-  }
-
-  function handleClearImage(slotIndex: number) {
-    if (!permissions.canEditImages) return;
-    if (!confirm('Clear this image? This will remove the uploaded image.')) return;
-    setImage(slotIndex, 'clear');
-    const previewUrl = previewUrls.images.get(slotIndex);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrls((prev) => {
-        const newImages = new Map(prev.images);
-        newImages.delete(slotIndex);
-        return { ...prev, images: newImages };
-      });
-    }
-  }
-
-  function handleClearVideo(slotIndex: number) {
-    if (!permissions.canEditVideos) return;
-    if (!confirm('Clear this video? This will remove the uploaded video.')) return;
-    setVideo(slotIndex, 'clear');
-    const previewUrl = previewUrls.videos.get(slotIndex);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrls((prev) => {
-        const newVideos = new Map(prev.videos);
-        newVideos.delete(slotIndex);
-        return { ...prev, videos: newVideos };
-      });
-    }
-  }
-
-  function handleClearSong() {
-    if (!permissions.canEditSong) return;
-    if (!confirm('Clear background song? This will remove the uploaded song.')) return;
-    setSong('clear');
-    setPreviewUrls((prev) => {
-      if (prev.song) URL.revokeObjectURL(prev.song);
-      return { ...prev, song: null };
-    });
-  }
-
-  async function handleRunPrecheck() {
-    setPrecheckResult('idle');
-    const result = await runPrecheck(precheckConfig);
-    setPrecheckResult(result.success ? 'passed' : 'failed');
-  }
-
-  async function handleSubmit() {
+  const handleSubmit = async () => {
     setIsClosingAfterSubmit(true);
-
-    // For non-admin users, only publish image-related changes
-    const isImagesOnlyMode = !permissions.isAdmin;
-
-    const result = await publish({
-      hero: isImagesOnlyMode ? undefined : (draft.hero === null ? undefined : draft.hero),
+    
+    // Convert draft to PublishChanges format (hero can be undefined instead of null)
+    const changes: PublishChanges = {
+      hero: draft.hero === null ? undefined : draft.hero,
       images: draft.images,
-      videos: isImagesOnlyMode ? new Map() : draft.videos,
-      song: isImagesOnlyMode ? undefined : (draft.song === null ? undefined : draft.song),
+      videos: draft.videos,
+      song: draft.song === null ? undefined : draft.song,
       imageOrder: draft.imageOrder,
       imageTransforms: draft.imageTransforms,
-    });
+    };
+    
+    await publish(changes);
+  };
 
-    if (result.success) {
-      // Clean up preview URLs
-      if (previewUrls.hero) URL.revokeObjectURL(previewUrls.hero);
-      previewUrls.images.forEach((url) => URL.revokeObjectURL(url));
-      previewUrls.videos.forEach((url) => URL.revokeObjectURL(url));
-      if (previewUrls.song) URL.revokeObjectURL(previewUrls.song);
+  const handlePrecheckSubmit = async () => {
+    await runPrecheck(precheckConfig);
+    setShowPrecheckConfig(false);
+  };
 
-      resetDraft(draft.imageOrder, draft.imageTransforms);
-      setPreviewUrls({ hero: null, images: new Map(), videos: new Map(), song: null });
-    } else {
-      // Keep dialog open on failure so user can see error and retry
-      setIsClosingAfterSubmit(false);
-    }
-  }
+  const hasPendingChanges = 
+    draft.hero !== null ||
+    draft.images.size > 0 ||
+    draft.videos.size > 0 ||
+    draft.song !== null ||
+    JSON.stringify(draft.imageOrder) !== JSON.stringify(liveImageOrder) ||
+    JSON.stringify(Array.from(draft.imageTransforms.entries())) !== JSON.stringify(Array.from(liveImageTransforms.entries()));
 
-  function handleCancel() {
-    if (isClosingAfterSubmit) {
-      return;
-    }
-
-    if (hasPendingChanges) {
-      if (!confirm('Discard all pending changes?')) return;
-    }
-
-    // Clean up preview URLs
-    if (previewUrls.hero) URL.revokeObjectURL(previewUrls.hero);
-    previewUrls.images.forEach((url) => URL.revokeObjectURL(url));
-    previewUrls.videos.forEach((url) => URL.revokeObjectURL(url));
-    if (previewUrls.song) URL.revokeObjectURL(previewUrls.song);
-
-    resetDraft(liveImageOrder, liveImageTransforms);
-    setPreviewUrls({ hero: null, images: new Map(), videos: new Map(), song: null });
-    onClose();
-  }
-
-  function ImageSlot({ slotIndex }: { slotIndex: number }) {
-    const draftFile = draft.images.get(slotIndex);
-    const previewUrl = previewUrls.images.get(slotIndex);
-    const isCleared = draftFile === 'clear';
-    const hasImage = !isCleared && (imageUrls.has(slotIndex) || previewUrl);
-    const imageUrl = previewUrl || imageUrls.get(slotIndex);
-    const transform = draft.imageTransforms.get(slotIndex);
-
-    const isDragging = dragState.draggedSlot === slotIndex;
-    const isDropTarget = dragState.dropTarget === slotIndex;
-    const isSelected = selectedSlot === slotIndex;
-
-    return (
-      <div
-        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-          isDragging
-            ? 'border-rose-500 opacity-50 scale-95'
-            : isDropTarget
-            ? 'border-rose-500 bg-rose-100 scale-105'
-            : isSelected
-            ? 'border-rose-600 ring-2 ring-rose-400'
-            : 'border-rose-200 bg-rose-50 hover:border-rose-400'
-        }`}
-        draggable={permissions.canEditImages}
-        onDragStart={() => permissions.canEditImages && startDrag(slotIndex)}
-        onDragOver={(e) => {
-          if (!permissions.canEditImages) return;
-          e.preventDefault();
-          setDropTarget(slotIndex);
-        }}
-        onDragLeave={() => setDropTarget(null)}
-        onDrop={(e) => {
-          if (!permissions.canEditImages) return;
-          e.preventDefault();
-          endDrag();
-        }}
-        onDragEnd={() => endDrag()}
-        onClick={() => permissions.canEditImages && setSelectedSlot(isSelected ? null : slotIndex)}
-      >
-        {hasImage && imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={`Memory ${slotIndex}`}
-            className="w-full h-full object-cover"
-            loading="eager"
-            style={
-              transform
-                ? {
-                    transform: `scale(${transform.zoom}) translate(${transform.x / transform.zoom}px, ${transform.y / transform.zoom}px)`,
-                    transformOrigin: 'center center',
-                  }
-                : undefined
-            }
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-rose-300">
-            <Image className="w-8 h-8" />
-          </div>
-        )}
-
-        {/* Desktop hover overlay */}
-        {permissions.canEditImages && (
-          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
-            <input
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(slotIndex, file);
-                e.target.value = '';
-              }}
-              disabled={status === 'running'}
-              className="hidden"
-              id={`image-slot-${slotIndex}`}
-            />
-            <Label
-              htmlFor={`image-slot-${slotIndex}`}
-              className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
-            >
-              <Upload className="w-3 h-3" />
-              <span>{hasImage ? 'Replace' : 'Upload'}</span>
-            </Label>
-
-            {hasImage && (
-              <>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="h-auto px-2 py-1 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAdjustingSlot(slotIndex);
-                  }}
-                >
-                  <Settings className="w-3 h-3" />
-                  <span>Adjust</span>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="h-auto px-2 py-1 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClearImage(slotIndex);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Mobile controls - always visible */}
-        {permissions.canEditImages && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex md:hidden items-center justify-center gap-1">
-            <input
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(slotIndex, file);
-                e.target.value = '';
-              }}
-              disabled={status === 'running'}
-              className="hidden"
-              id={`image-slot-mobile-${slotIndex}`}
-            />
-            <Label
-              htmlFor={`image-slot-mobile-${slotIndex}`}
-              className="cursor-pointer bg-white/90 text-rose-900 px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
-            >
-              <Upload className="w-3 h-3" />
-            </Label>
-
-            {hasImage && (
-              <>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="h-auto px-2 py-1 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAdjustingSlot(slotIndex);
-                  }}
-                >
-                  <Settings className="w-3 h-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="h-auto px-2 py-1 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClearImage(slotIndex);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-
-        <div className="absolute top-1 left-1 bg-rose-900/80 text-white text-xs px-2 py-0.5 rounded">
-          #{slotIndex}
-        </div>
-
-        {hasImage && !isCleared && (
-          <div className="absolute top-1 right-1 bg-green-500/90 text-white rounded-full p-1">
-            <Check className="w-3 h-3" />
-          </div>
-        )}
-
-        {draftFile && draftFile !== 'clear' && (
-          <div className="absolute bottom-1 right-1 bg-amber-500/90 text-white text-xs px-2 py-0.5 rounded md:block hidden">
-            Pending
-          </div>
-        )}
-
-        {isCleared && (
-          <div className="absolute bottom-1 right-1 bg-red-500/90 text-white text-xs px-2 py-0.5 rounded md:block hidden">
-            Will Clear
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  function VideoSlot({ slotIndex }: { slotIndex: number }) {
-    const draftFile = draft.videos.get(slotIndex);
-    const previewUrl = previewUrls.videos.get(slotIndex);
-    const isCleared = draftFile === 'clear';
-    const hasVideo = !isCleared && (videoUrls.has(slotIndex) || previewUrl);
-    const videoUrl = previewUrl || videoUrls.get(slotIndex);
-
-    return (
-      <div className="relative aspect-[9/16] rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50 hover:border-rose-400 transition-colors">
-        {hasVideo && videoUrl ? (
-          <video src={videoUrl} className="w-full h-full object-cover" muted playsInline preload="auto" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-rose-300">
-            <Video className="w-8 h-8" />
-          </div>
-        )}
-
-        {/* Desktop hover overlay */}
-        {permissions.canEditVideos && (
-          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
-            <input
-              type="file"
-              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleVideoUpload(slotIndex, file);
-                e.target.value = '';
-              }}
-              disabled={status === 'running'}
-              className="hidden"
-              id={`video-slot-${slotIndex}`}
-            />
-            <Label
-              htmlFor={`video-slot-${slotIndex}`}
-              className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1"
-            >
-              <Upload className="w-3 h-3" />
-              <span>{hasVideo ? 'Replace' : 'Upload'}</span>
-            </Label>
-
-            {hasVideo && (
-              <Button
-                size="sm"
-                variant="destructive"
-                className="h-auto px-2 py-1 text-xs"
-                onClick={() => handleClearVideo(slotIndex)}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Mobile controls - always visible */}
-        {permissions.canEditVideos && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex md:hidden items-center justify-center gap-1">
-            <input
-              type="file"
-              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleVideoUpload(slotIndex, file);
-                e.target.value = '';
-              }}
-              disabled={status === 'running'}
-              className="hidden"
-              id={`video-slot-mobile-${slotIndex}`}
-            />
-            <Label
-              htmlFor={`video-slot-mobile-${slotIndex}`}
-              className="cursor-pointer bg-white/90 text-rose-900 px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
-            >
-              <Upload className="w-3 h-3" />
-            </Label>
-
-            {hasVideo && (
-              <Button
-                size="sm"
-                variant="destructive"
-                className="h-auto px-2 py-1 text-xs"
-                onClick={() => handleClearVideo(slotIndex)}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-        )}
-
-        {!permissions.canEditVideos && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-            <div className="text-center text-white px-4">
-              <Lock className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-xs">Administrator access required</p>
-            </div>
-          </div>
-        )}
-
-        <div className="absolute top-1 left-1 bg-rose-900/80 text-white text-xs px-2 py-0.5 rounded">
-          #{slotIndex}
-        </div>
-
-        {hasVideo && !isCleared && (
-          <div className="absolute top-1 right-1 bg-green-500/90 text-white rounded-full p-1">
-            <Check className="w-3 h-3" />
-          </div>
-        )}
-
-        {draftFile && draftFile !== 'clear' && (
-          <div className="absolute bottom-1 right-1 bg-amber-500/90 text-white text-xs px-2 py-0.5 rounded md:block hidden">
-            Pending
-          </div>
-        )}
-
-        {isCleared && (
-          <div className="absolute bottom-1 right-1 bg-red-500/90 text-white text-xs px-2 py-0.5 rounded md:block hidden">
-            Will Clear
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Compute current preview values (draft or live)
-  const currentHeroUrl = draft.hero === 'clear' ? null : (previewUrls.hero || heroBackgroundUrl);
-  const currentSongUrl = draft.song === 'clear' ? null : (previewUrls.song || songUrl);
-
-  const hasUploadOrClearChanges = draft.hero || draft.images.size > 0 || draft.videos.size > 0 || draft.song;
-  const hasOrderChanges = JSON.stringify(draft.imageOrder) !== JSON.stringify(liveImageOrder);
-  const hasTransformChanges = (() => {
-    if (draft.imageTransforms.size !== liveImageTransforms.size) return true;
-    for (const [key, value] of draft.imageTransforms.entries()) {
-      const liveValue = liveImageTransforms.get(key);
-      if (!liveValue || 
-          liveValue.zoom !== value.zoom || 
-          liveValue.x !== value.x || 
-          liveValue.y !== value.y) {
-        return true;
-      }
-    }
-    return false;
-  })();
-
-  const hasPendingChanges = hasUploadOrClearChanges || hasOrderChanges || hasTransformChanges;
   const isSubmitting = status === 'running';
 
-  const formattedError = error ? formatDiagnosticForUser(error) : null;
+  // Permission checks - permissions object returns values directly
+  const canEditHero = permissions.canEditHero;
+  const canEditImages = permissions.canEditImages;
+  const canEditVideos = permissions.canEditVideos;
+  const canEditSong = permissions.canEditSong;
 
-  // Determine which tabs to show based on permissions
-  const isImagesOnlyMode = !permissions.isAdmin;
+  const isLoadingPermissions = permissions.isLoading;
+
+  if (isLoadingPermissions) {
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
+              <p className="text-rose-700">Loading permissions...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-rose-900">Media Manager</DialogTitle>
             <DialogDescription>
-              {isImagesOnlyMode 
-                ? 'Manage your Image Memories. Upload, adjust, reorder, and clear images. Click Submit to save all changes.'
-                : 'Manage your Hero background, Image Memories, Video Memories, and Background Song. Click Submit to save all changes.'}
+              Upload and manage your hero background, images, videos, and background song
             </DialogDescription>
           </DialogHeader>
 
-          {/* Error Display */}
-          {status === 'failed' && formattedError && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{formattedError.title}</AlertTitle>
-              <AlertDescription>
-                <p className="mb-2">{formattedError.message}</p>
-                {formattedError.details && (
-                  <Collapsible open={showErrorDetails} onOpenChange={setShowErrorDetails}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="p-0 h-auto text-xs">
-                        {showErrorDetails ? 'Hide details' : 'Show details'}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      <pre className="text-xs bg-black/10 p-2 rounded overflow-x-auto">
-                        {formattedError.details}
-                      </pre>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Pre-publish Check Section - only for admins */}
-          {permissions.isAdmin && (
-            <Collapsible open={showPrecheckConfig} onOpenChange={setShowPrecheckConfig}>
-              <div className="border rounded-lg p-3 mb-4">
-                <div className="flex items-center justify-between">
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="p-0 h-auto">
-                      <Settings className="w-4 h-4 mr-2" />
-                      <span className="font-semibold">Pre-publish Check</span>
-                    </Button>
-                  </CollapsibleTrigger>
-                  {precheckResult === 'passed' && (
-                    <div className="flex items-center gap-1 text-green-600 text-sm">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Passed</span>
-                    </div>
-                  )}
-                  {precheckResult === 'failed' && (
-                    <div className="flex items-center gap-1 text-red-600 text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Failed</span>
-                    </div>
-                  )}
-                </div>
-                
-                <CollapsibleContent className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="frontend-build-failed" className="text-sm">
-                      Simulate frontend build failure
-                    </Label>
-                    <Switch
-                      id="frontend-build-failed"
-                      checked={precheckConfig.frontendBuildFailed}
-                      onCheckedChange={(checked) =>
-                        setPrecheckConfig((prev) => ({ ...prev, frontendBuildFailed: checked }))
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="missing-artifacts" className="text-sm">
-                      Simulate missing artifacts
-                    </Label>
-                    <Switch
-                      id="missing-artifacts"
-                      checked={precheckConfig.missingArtifacts}
-                      onCheckedChange={(checked) =>
-                        setPrecheckConfig((prev) => ({ ...prev, missingArtifacts: checked }))
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="misconfigured-canister" className="text-sm">
-                      Simulate misconfigured canister
-                    </Label>
-                    <Switch
-                      id="misconfigured-canister"
-                      checked={precheckConfig.misconfiguredCanister}
-                      onCheckedChange={(checked) =>
-                        setPrecheckConfig((prev) => ({ ...prev, misconfiguredCanister: checked }))
-                      }
-                    />
-                  </div>
-                  <Button
-                    onClick={handleRunPrecheck}
-                    size="sm"
-                    variant="outline"
-                    className="w-full mt-2"
-                    disabled={isSubmitting}
-                  >
-                    Run Check
-                  </Button>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          )}
-
-          <Tabs defaultValue={isImagesOnlyMode ? "images" : "preview"} className="flex-1 flex flex-col min-h-0">
-            <TabsList className={`grid w-full ${isImagesOnlyMode ? 'grid-cols-2' : 'grid-cols-5'}`}>
-              {!isImagesOnlyMode && (
-                <TabsTrigger value="preview">
-                  <Eye className="w-4 h-4 mr-1" />
-                  Preview
-                </TabsTrigger>
-              )}
-              {!isImagesOnlyMode && <TabsTrigger value="hero">Hero</TabsTrigger>}
-              <TabsTrigger value="images">Images ({imageUrls.size + previewUrls.images.size}/43)</TabsTrigger>
-              {!isImagesOnlyMode && <TabsTrigger value="videos">Videos ({videoUrls.size + previewUrls.videos.size}/6)</TabsTrigger>}
-              {!isImagesOnlyMode && <TabsTrigger value="song">Song</TabsTrigger>}
-              {isImagesOnlyMode && (
-                <TabsTrigger value="preview">
-                  <Eye className="w-4 h-4 mr-1" />
-                  Preview
-                </TabsTrigger>
-              )}
+          <Tabs defaultValue="hero" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="hero" disabled={!canEditHero}>Hero</TabsTrigger>
+              <TabsTrigger value="images" disabled={!canEditImages}>Images</TabsTrigger>
+              <TabsTrigger value="videos" disabled={!canEditVideos}>Videos</TabsTrigger>
+              <TabsTrigger value="song" disabled={!canEditSong}>Song</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="preview" className="flex-1 mt-4 min-h-0">
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="space-y-6">
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-semibold text-rose-900 mb-2">Draft Preview</h3>
-                    <p className="text-sm text-rose-600">
-                      {isImagesOnlyMode 
-                        ? 'This is what will be published when you click Submit'
-                        : 'This is what will be published when you click Submit'}
-                    </p>
-                  </div>
-
-                  {/* Hero Preview - only for admins */}
-                  {!isImagesOnlyMode && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                        <Image className="w-4 h-4" />
-                        Hero Background
-                      </h4>
-                      <div className="relative aspect-video max-w-md mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
-                        {currentHeroUrl ? (
-                          <img src={currentHeroUrl} alt="Hero preview" className="w-full h-full object-cover" loading="eager" />
+            {/* Hero Tab */}
+            <TabsContent value="hero" className="space-y-4">
+              <ScrollArea className="h-[50vh]">
+                <div className="space-y-4 pr-4">
+                  <div className="space-y-2">
+                    <Label>Hero Background</Label>
+                    <div className="grid gap-4">
+                      {/* Current/Preview */}
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-rose-100 border-2 border-rose-200">
+                        {(draft.hero instanceof File ? URL.createObjectURL(draft.hero) : heroBackgroundUrl) ? (
+                          <img
+                            src={draft.hero instanceof File ? URL.createObjectURL(draft.hero) : heroBackgroundUrl || ''}
+                            alt="Hero background"
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-rose-300">
+                          <div className="flex items-center justify-center h-full text-rose-300">
                             <div className="text-center">
                               <Image className="w-12 h-12 mx-auto mb-2" />
-                              <p className="text-sm">No hero background uploaded</p>
+                              <p>No hero background</p>
                             </div>
                           </div>
                         )}
                       </div>
+
+                      {/* Controls */}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/png,image/jpg,image/jpeg';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) setHero(file);
+                            };
+                            input.click();
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {heroBackgroundUrl || draft.hero instanceof File ? 'Replace' : 'Add'}
+                        </Button>
+                        {(heroBackgroundUrl || draft.hero instanceof File) && (
+                          <Button
+                            onClick={() => setHero('clear')}
+                            variant="destructive"
+                            size="icon"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
 
-                  {/* Images Preview */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                      <Image className="w-4 h-4" />
-                      Image Memories ({draft.imageOrder.filter(idx => {
-                        const draftFile = draft.images.get(idx);
-                        return draftFile !== 'clear' && (previewUrls.images.has(idx) || imageUrls.has(idx));
-                      }).length}/43)
-                    </h4>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {draft.imageOrder.slice(0, 12).map((slotIndex) => {
-                        const draftFile = draft.images.get(slotIndex);
-                        const previewUrl = previewUrls.images.get(slotIndex);
-                        const isCleared = draftFile === 'clear';
-                        const hasImage = !isCleared && (imageUrls.has(slotIndex) || previewUrl);
-                        const imageUrl = previewUrl || imageUrls.get(slotIndex);
-                        const transform = draft.imageTransforms.get(slotIndex);
+            {/* Images Tab */}
+            <TabsContent value="images" className="space-y-4">
+              <ScrollArea className="h-[50vh]">
+                <div className="space-y-4 pr-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Image Memories (43 slots)</Label>
+                    <p className="text-xs text-rose-600">Tap image to adjust, use arrows to reorder</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    {draft.imageOrder.map((slotId) => {
+                      const currentUrl = imageUrls.get(slotId);
+                      const pendingFile = draft.images.get(slotId);
+                      const previewUrl = pendingFile instanceof File ? URL.createObjectURL(pendingFile) : currentUrl;
+                      const transform = draft.imageTransforms.get(slotId);
+                      const isSelected = selectedSlot === slotId;
+                      const isDragging = dragState.draggedSlot === slotId;
+                      const isDropTarget = dragState.dropTarget === slotId;
 
-                        return (
-                          <div key={slotIndex} className="relative aspect-square rounded border border-rose-200 bg-rose-50 overflow-hidden">
-                            {hasImage && imageUrl ? (
+                      return (
+                        <div
+                          key={slotId}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isSelected ? 'border-rose-500 ring-2 ring-rose-300' : 
+                            isDragging ? 'border-blue-500 opacity-50' :
+                            isDropTarget ? 'border-green-500 ring-2 ring-green-300' :
+                            'border-rose-200'
+                          }`}
+                          draggable
+                          onDragStart={() => startDrag(slotId)}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDropTarget(slotId);
+                          }}
+                          onDragLeave={() => setDropTarget(null)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            endDrag();
+                          }}
+                        >
+                          {previewUrl ? (
+                            <>
                               <img
-                                src={imageUrl}
-                                alt={`Preview ${slotIndex}`}
-                                className="w-full h-full object-cover"
-                                loading="eager"
+                                src={previewUrl}
+                                alt={`Slot ${slotId}`}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => setAdjustingSlot(slotId)}
                                 style={
                                   transform
                                     ? {
@@ -823,347 +279,334 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
                                     : undefined
                                 }
                               />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-rose-300">
-                                <Image className="w-4 h-4" />
+                              <div className="absolute top-1 left-1 bg-rose-900/80 text-white text-xs px-1.5 py-0.5 rounded">
+                                {slotId}
                               </div>
-                            )}
-                            <div className="absolute top-0.5 left-0.5 bg-rose-900/80 text-white text-[10px] px-1 rounded">
-                              #{slotIndex}
+                              {/* Always visible controls */}
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-white hover:bg-white/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'image/*';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) setImage(slotId, file);
+                                    };
+                                    input.click();
+                                  }}
+                                >
+                                  <Upload className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-white hover:bg-white/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAdjustingSlot(slotId);
+                                  }}
+                                >
+                                  <Settings className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-white hover:bg-white/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setImage(slotId, 'clear');
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full bg-rose-50 text-rose-300">
+                              <Image className="w-6 h-6 mb-1" />
+                              <p className="text-xs">{slotId}</p>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="mt-1 h-6 text-xs"
+                                onClick={() => {
+                                  const input = document.createElement('input');
+                                  input.type = 'file';
+                                  input.accept = 'image/*';
+                                  input.onchange = (e) => {
+                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                    if (file) setImage(slotId, file);
+                                  };
+                                  input.click();
+                                }}
+                              >
+                                <Upload className="w-3 h-3 mr-1" />
+                                Add
+                              </Button>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground text-center">Showing first 12 images in draft order</p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  {/* Videos Preview - only for admins */}
-                  {!isImagesOnlyMode && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                        <Video className="w-4 h-4" />
-                        Video Memories ({Array.from({ length: 6 }, (_, i) => i + 1).filter(idx => {
-                          const draftFile = draft.videos.get(idx);
-                          return draftFile !== 'clear' && (previewUrls.videos.has(idx) || videoUrls.has(idx));
-                        }).length}/6)
-                      </h4>
-                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                        {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => {
-                          const draftFile = draft.videos.get(slotIndex);
-                          const previewUrl = previewUrls.videos.get(slotIndex);
-                          const isCleared = draftFile === 'clear';
-                          const hasVideo = !isCleared && (videoUrls.has(slotIndex) || previewUrl);
-                          const videoUrl = previewUrl || videoUrls.get(slotIndex);
-
-                          return (
-                            <div key={slotIndex} className="relative aspect-[9/16] rounded border border-rose-200 bg-rose-50 overflow-hidden">
-                              {hasVideo && videoUrl ? (
-                                <video src={videoUrl} className="w-full h-full object-cover" muted playsInline preload="auto" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-rose-300">
-                                  <Video className="w-4 h-4" />
-                                </div>
-                              )}
-                              <div className="absolute top-0.5 left-0.5 bg-rose-900/80 text-white text-[10px] px-1 rounded">
-                                #{slotIndex}
-                              </div>
-                            </div>
-                          );
-                        })}
+                  {/* Mobile-friendly reorder controls */}
+                  {selectedSlot && (
+                    <div className="sticky bottom-0 bg-white border-t-2 border-rose-200 p-3 rounded-lg shadow-lg">
+                      <p className="text-sm font-medium text-rose-900 mb-2">Reorder Slot {selectedSlot}</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => moveImageSlot(selectedSlot, 'left')}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => moveImageSlot(selectedSlot, 'up')}
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => moveImageSlot(selectedSlot, 'down')}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => moveImageSlot(selectedSlot, 'right')}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Song Preview - only for admins */}
-                  {!isImagesOnlyMode && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-rose-900 flex items-center gap-2">
-                        <Music className="w-4 h-4" />
-                        Background Song
-                      </h4>
-                      <div className="max-w-md mx-auto rounded-lg border-2 border-rose-200 bg-rose-50 p-4">
-                        {currentSongUrl ? (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-center text-rose-600">
-                              <Music className="w-12 h-12" />
-                            </div>
-                            <audio src={currentSongUrl} controls className="w-full" preload="auto" />
-                            <p className="text-center text-sm text-rose-700 font-medium">Custom song</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-center text-rose-300">
-                              <Music className="w-12 h-12" />
-                            </div>
-                            <p className="text-center text-sm text-rose-600">No song uploaded</p>
-                          </div>
-                        )}
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full mt-2"
+                        onClick={() => setSelectedSlot(null)}
+                      >
+                        Done
+                      </Button>
                     </div>
                   )}
                 </div>
               </ScrollArea>
             </TabsContent>
 
-            {!isImagesOnlyMode && (
-              <TabsContent value="hero" className="flex-1 mt-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold text-rose-900 flex items-center gap-2">
-                      <Image className="w-5 h-5" />
-                      Hero Background
-                    </Label>
-                    {currentHeroUrl && permissions.canEditHero && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearHero}
-                        disabled={isSubmitting}
-                        className="text-rose-600 hover:text-rose-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
+            {/* Videos Tab */}
+            <TabsContent value="videos" className="space-y-4">
+              <ScrollArea className="h-[50vh]">
+                <div className="space-y-4 pr-4">
+                  <Label>Video Memories (6 slots)</Label>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }, (_, i) => i + 1).map((slotId) => {
+                      const currentUrl = videoUrls.get(slotId);
+                      const pendingFile = draft.videos.get(slotId);
+                      const previewUrl = pendingFile instanceof File ? URL.createObjectURL(pendingFile) : currentUrl;
 
-                  <div className="relative aspect-video max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50">
-                    {currentHeroUrl ? (
-                      <img src={currentHeroUrl} alt="Hero background" className="w-full h-full object-cover" loading="eager" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-rose-300">
-                        <Image className="w-16 h-16" />
-                      </div>
-                    )}
-
-                    {permissions.canEditHero && (
-                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <input
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                          onChange={handleHeroUpload}
-                          disabled={isSubmitting}
-                          className="hidden"
-                          id="hero-upload"
-                        />
-                        <Label
-                          htmlFor="hero-upload"
-                          className="cursor-pointer bg-white/90 hover:bg-white text-rose-900 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+                      return (
+                        <div
+                          key={slotId}
+                          className="relative aspect-[9/16] rounded-lg overflow-hidden border-2 border-rose-200"
                         >
-                          <Upload className="w-4 h-4" />
-                          <span>{currentHeroUrl ? 'Replace Background' : 'Upload Background'}</span>
-                        </Label>
-                      </div>
-                    )}
-
-                    {!permissions.canEditHero && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <div className="text-center text-white px-4">
-                          <Lock className="w-12 h-12 mx-auto mb-2" />
-                          <p className="text-sm">Administrator access required</p>
+                          {previewUrl ? (
+                            <>
+                              <video
+                                src={previewUrl}
+                                className="w-full h-full object-cover"
+                                playsInline
+                                muted
+                                loop
+                              />
+                              <div className="absolute top-2 left-2 bg-rose-900/80 text-white text-xs px-2 py-1 rounded">
+                                {slotId}
+                              </div>
+                              {/* Always visible controls */}
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="flex-1 text-white hover:bg-white/20"
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'video/*';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) setVideo(slotId, file);
+                                    };
+                                    input.click();
+                                  }}
+                                >
+                                  <Upload className="w-4 h-4 mr-1" />
+                                  Replace
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-white hover:bg-white/20"
+                                  onClick={() => setVideo(slotId, 'clear')}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full bg-rose-50 text-rose-300">
+                              <Video className="w-8 h-8 mb-2" />
+                              <p className="text-sm mb-2">Slot {slotId}</p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const input = document.createElement('input');
+                                  input.type = 'file';
+                                  input.accept = 'video/*';
+                                  input.onchange = (e) => {
+                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                    if (file) setVideo(slotId, file);
+                                  };
+                                  input.click();
+                                }}
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Add Video
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
-
-                  {draft.hero && (
-                    <p className="text-center text-sm text-amber-600 font-medium">⚠ Pending changes (click Submit to save)</p>
-                  )}
-                </div>
-              </TabsContent>
-            )}
-
-            <TabsContent value="images" className="flex-1 mt-4 min-h-0 flex flex-col">
-              {/* Helper text about file picker */}
-              <Alert className="mb-4 bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-sm text-blue-900">
-                  When you tap Upload, your device will show a file picker. Depending on your device, you may see options like "Photos", "Gallery", or "Google Drive". You can select images from any of these sources without needing to log in to Google Drive separately.
-                </AlertDescription>
-              </Alert>
-
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                  {draft.imageOrder.map((slotIndex) => (
-                    <ImageSlot key={slotIndex} slotIndex={slotIndex} />
-                  ))}
                 </div>
               </ScrollArea>
-              
-              {/* Mobile reorder controls */}
-              {selectedSlot !== null && permissions.canEditImages && (
-                <div className="mt-4 p-3 bg-rose-50 rounded-lg border border-rose-200 md:hidden">
-                  <p className="text-sm font-medium text-rose-900 mb-2">Move Image #{selectedSlot}</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => moveImageSlot(selectedSlot, 'left')}
-                      disabled={isSubmitting}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => moveImageSlot(selectedSlot, 'up')}
-                      disabled={isSubmitting}
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => moveImageSlot(selectedSlot, 'down')}
-                      disabled={isSubmitting}
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => moveImageSlot(selectedSlot, 'right')}
-                      disabled={isSubmitting}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <p className="text-xs text-muted-foreground mt-4 text-center">
-                <span className="hidden md:inline">Drag to reorder • Hover to upload/adjust</span>
-                <span className="md:hidden">Tap to select • Use arrows to reorder</span>
-                <span className="block mt-1">Accepts .jpg, .jpeg, .png, .webp</span>
-              </p>
             </TabsContent>
 
-            {!isImagesOnlyMode && (
-              <TabsContent value="videos" className="flex-1 mt-4 min-h-0">
-                <ScrollArea className="h-[500px] pr-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => (
-                      <VideoSlot key={slotIndex} slotIndex={slotIndex} />
-                    ))}
-                  </div>
-                </ScrollArea>
-                <p className="text-xs text-muted-foreground mt-4 text-center">
-                  {permissions.canEditVideos ? (
-                    <>
-                      <span className="hidden md:inline">Hover over any slot to upload or replace.</span>
-                      <span className="md:hidden">Tap controls to upload or replace.</span>
-                      <span className="block mt-1">Accepts .mp4, .mov, .webm</span>
-                    </>
-                  ) : (
-                    <span className="text-rose-600">Administrator access required</span>
-                  )}
-                </p>
-              </TabsContent>
-            )}
+            {/* Song Tab */}
+            <TabsContent value="song" className="space-y-4">
+              <ScrollArea className="h-[50vh]">
+                <div className="space-y-4 pr-4">
+                  <Label>Background Song</Label>
+                  
+                  <div className="space-y-4">
+                    {/* Current/Preview */}
+                    <div className="relative rounded-lg overflow-hidden bg-rose-100 border-2 border-rose-200 p-6">
+                      {(draft.song instanceof File ? URL.createObjectURL(draft.song) : songUrl) ? (
+                        <div className="flex items-center gap-4">
+                          <Music className="w-12 h-12 text-rose-600" />
+                          <div className="flex-1">
+                            <p className="font-medium text-rose-900">
+                              {draft.song instanceof File ? draft.song.name : 'Current Song'}
+                            </p>
+                            <audio
+                              src={draft.song instanceof File ? URL.createObjectURL(draft.song) : songUrl || ''}
+                              controls
+                              className="w-full mt-2"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-rose-300 py-8">
+                          <Music className="w-16 h-16 mb-3" />
+                          <p>No background song</p>
+                        </div>
+                      )}
+                    </div>
 
-            {!isImagesOnlyMode && (
-              <TabsContent value="song" className="flex-1 mt-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold text-rose-900 flex items-center gap-2">
-                      <Music className="w-5 h-5" />
-                      Background Song
-                    </Label>
-                    {currentSongUrl && permissions.canEditSong && (
+                    {/* Controls */}
+                    <div className="flex gap-2">
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearSong}
-                        disabled={isSubmitting}
-                        className="text-rose-600 hover:text-rose-700"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'audio/*';
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) setSong(file);
+                          };
+                          input.click();
+                        }}
+                        variant="outline"
+                        className="flex-1"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Upload className="w-4 h-4 mr-2" />
+                        {songUrl || draft.song instanceof File ? 'Replace' : 'Add'} Song
                       </Button>
-                    )}
-                  </div>
-
-                  <div className="relative max-w-2xl mx-auto rounded-lg overflow-hidden border-2 border-rose-200 bg-rose-50 p-8">
-                    {currentSongUrl ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-center text-rose-600">
-                          <Music className="w-16 h-16" />
-                        </div>
-                        <audio src={currentSongUrl} controls className="w-full" preload="auto" />
-                        <p className="text-center text-sm text-rose-700 font-medium">Custom song uploaded</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-center text-rose-300">
-                          <Music className="w-16 h-16" />
-                        </div>
-                        <p className="text-center text-sm text-rose-600">No custom song uploaded</p>
-                      </div>
-                    )}
-
-                    {permissions.canEditSong && (
-                      <div className="mt-6 flex items-center justify-center">
-                        <input
-                          type="file"
-                          accept=".mp3,.wav,audio/mpeg,audio/wav"
-                          onChange={handleSongUpload}
-                          disabled={isSubmitting}
-                          className="hidden"
-                          id="song-upload"
-                        />
-                        <Label
-                          htmlFor="song-upload"
-                          className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+                      {(songUrl || draft.song instanceof File) && (
+                        <Button
+                          onClick={() => setSong('clear')}
+                          variant="destructive"
+                          size="icon"
                         >
-                          <Upload className="w-4 h-4" />
-                          <span>{currentSongUrl ? 'Replace Song' : 'Upload Song'}</span>
-                        </Label>
-                      </div>
-                    )}
-
-                    {!permissions.canEditSong && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <div className="text-center text-white px-4">
-                          <Lock className="w-12 h-12 mx-auto mb-2" />
-                          <p className="text-sm">Administrator access required</p>
-                        </div>
-                      </div>
-                    )}
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-
-                  {draft.song && (
-                    <p className="text-center text-sm text-amber-600 font-medium">⚠ Pending changes (click Submit to save)</p>
-                  )}
-
-                  {permissions.canEditSong && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      Accepts .mp3, .wav audio files
-                    </p>
-                  )}
                 </div>
-              </TabsContent>
-            )}
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
 
-          <DialogFooter className="flex-row gap-2 sm:gap-2 border-t pt-4">
-            <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-              <X className="w-4 h-4 mr-2" />
+          {/* Status Messages */}
+          {status === 'succeeded' && (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-900">Success!</AlertTitle>
+              <AlertDescription className="text-green-800">
+                Media published successfully. Changes are now live.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {status === 'failed' && error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {error.message}
+                {error.details && (
+                  <div className="mt-2 text-xs opacity-80">
+                    {error.details}
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <div className="flex-1" />
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !hasPendingChanges || permissions.isLoading}
+              disabled={!hasPendingChanges || isSubmitting}
               className="bg-rose-600 hover:bg-rose-700"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Submitting...
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Publishing...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Submit
+                  Save & Publish
                 </>
               )}
             </Button>
@@ -1171,14 +614,22 @@ export default function MediaManager({ open, onClose }: MediaManagerProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Image Adjust Modal */}
       {adjustingSlot !== null && (
         <ImageAdjustModal
           open={adjustingSlot !== null}
           onClose={() => setAdjustingSlot(null)}
-          imageUrl={previewUrls.images.get(adjustingSlot) || imageUrls.get(adjustingSlot) || ''}
           slotIndex={adjustingSlot}
+          imageUrl={
+            draft.images.get(adjustingSlot) instanceof File
+              ? URL.createObjectURL(draft.images.get(adjustingSlot) as File)
+              : imageUrls.get(adjustingSlot) || ''
+          }
           initialTransform={draft.imageTransforms.get(adjustingSlot)}
-          onSave={(transform) => setImageTransform(adjustingSlot, transform)}
+          onSave={(transform) => {
+            setImageTransform(adjustingSlot, transform);
+            setAdjustingSlot(null);
+          }}
         />
       )}
     </>

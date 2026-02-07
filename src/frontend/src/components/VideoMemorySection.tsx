@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Video } from 'lucide-react';
+import { Volume2, VolumeX, Video, Upload } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
@@ -18,7 +18,7 @@ export default function VideoMemorySection() {
   return (
     <section className="relative py-12 px-4 bg-gradient-to-b from-pink-50 to-rose-50">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl md:text-4xl font-bold text-rose-900">
             Our Video Memories 🎥 💕
           </h2>
@@ -36,6 +36,11 @@ export default function VideoMemorySection() {
           </div>
         </div>
 
+        <p className="text-center text-rose-600 text-sm mb-8">
+          <Upload className="w-4 h-4 inline mr-1" />
+          Use Media button to add or replace videos from your phone gallery
+        </p>
+
         {/* Video Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }, (_, i) => i + 1).map((slotIndex) => {
@@ -51,6 +56,7 @@ export default function VideoMemorySection() {
                   <div className="text-center text-rose-300">
                     <Video className="w-12 h-12 mx-auto mb-2" />
                     <p className="text-sm">No video uploaded for slot {slotIndex}</p>
+                    <Upload className="w-6 h-6 mx-auto mt-2 opacity-50" />
                   </div>
                 </div>
               );

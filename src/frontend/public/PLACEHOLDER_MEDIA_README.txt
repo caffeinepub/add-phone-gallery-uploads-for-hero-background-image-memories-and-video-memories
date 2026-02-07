@@ -17,10 +17,18 @@ states such as:
 
 HOW TO UPLOAD MEDIA
 -------------------
-1. Click the "Media" button in the top-right corner of the hero section
+1. Click the "Media" button in the Hero section (top-right corner)
 2. Navigate to the appropriate tab (Hero, Images, Videos, or Song)
-3. Upload your media files directly from your device
+3. Upload your media files directly from your device (phone gallery, Google Drive, etc.)
 4. Click "Submit" to publish your changes
+
+PERMISSIONS
+-----------
+All authenticated users can upload and manage:
+- Hero Background
+- Image Memories (up to 43 images)
+- Video Memories (up to 6 videos)
+- Background Song
 
 MEDIA SPECIFICATIONS
 --------------------
@@ -28,6 +36,14 @@ MEDIA SPECIFICATIONS
 - Image Memories: Up to 43 images (.jpg, .jpeg, .png, .webp)
 - Video Memories: Up to 6 videos (.mp4, .mov, .webm)
 - Background Song: 1 audio file (.mp3, .wav)
+
+IMAGE MEMORIES FEATURES
+-----------------------
+- Each image card has a 3D flip animation
+- Tap any image to reveal a romantic message on the back
+- Tap again to flip back to the image
+- Use the Media Manager to adjust zoom and position for each image
+- Drag and drop to reorder images (desktop) or use arrow buttons (mobile)
 
 PERSISTENCE
 -----------
@@ -45,3 +61,4 @@ NOTES
 - Empty states use clear English-only text
 - No placeholder assets are used for any media type
 - Media is bound persistently and rendered identically across all modes
+- Image flip cards are fully accessible with keyboard support (Enter/Space to flip)

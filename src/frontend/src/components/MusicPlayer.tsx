@@ -4,7 +4,6 @@ import { useMediaStore } from '../hooks/useMediaStore';
 
 export default function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showTapPrompt, setShowTapPrompt] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { songUrl } = useMediaStore();
 
@@ -36,12 +35,10 @@ export default function MusicPlayer() {
               audio.muted = false;
             }, 100);
             setIsPlaying(true);
-            setShowTapPrompt(false);
           })
           .catch(() => {
-            // Autoplay blocked, show tap prompt
+            // Autoplay blocked, silently fail
             setIsPlaying(false);
-            setShowTapPrompt(true);
           });
       }
     }
@@ -58,11 +55,9 @@ export default function MusicPlayer() {
         audio.play()
           .then(() => {
             setIsPlaying(true);
-            setShowTapPrompt(false);
           })
           .catch(() => {
             setIsPlaying(false);
-            setShowTapPrompt(true);
           });
       }
     }
@@ -80,10 +75,9 @@ export default function MusicPlayer() {
       audio.play()
         .then(() => {
           setIsPlaying(true);
-          setShowTapPrompt(false);
         })
         .catch(() => {
-          setShowTapPrompt(true);
+          // Silently handle error
         });
     }
   };
@@ -101,13 +95,7 @@ export default function MusicPlayer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {showTapPrompt && !isPlaying && (
-        <div className="absolute bottom-full right-0 mb-2 bg-rose-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap animate-bounce">
-          Tap to start music 🎵
-        </div>
-      )}
-      
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
       <button
         onClick={togglePlay}
         className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-rose-400 to-pink-500 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
@@ -125,6 +113,8 @@ export default function MusicPlayer() {
         ref={audioRef}
         loop
         preload="auto"
+        controls
+        className="music-player-audio"
       >
         <source src={songUrl} type={getAudioType(songUrl)} />
       </audio>

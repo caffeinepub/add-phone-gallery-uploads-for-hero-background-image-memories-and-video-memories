@@ -9,11 +9,14 @@ export default function ImageMemorySection() {
   return (
     <section className="relative py-12 px-4 bg-gradient-to-b from-rose-50 to-pink-50">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold text-center text-rose-900 mb-8">
+        <h2 className="text-3xl md:text-4xl font-bold text-center text-rose-900 mb-4">
           Our Beautiful Memories 🧿 🎀 💕
         </h2>
-        <p className="text-center text-rose-700 mb-8">
+        <p className="text-center text-rose-700 mb-2">
           Tap any photo to reveal a special message 💖
+        </p>
+        <p className="text-center text-rose-600 text-sm mb-8">
+          Use Media button above to add, replace, or adjust images with drag & zoom controls
         </p>
 
         {/* Image Grid */}

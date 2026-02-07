@@ -2,12 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-frontend-media-manager-permissions-logic-so-that-the-images-tab-is-editable-for-all-visitors-anyone-while-hero-videos-song-remain-restricted-to-administrators-ensure-any-user-facing-permission-lock-text-is-in-english-and-matches-the-new-behavior",
-      "featureTitle": "Update frontend Media Manager permissions logic so that the Images tab is editable for all visitors (anyone), while Hero/Videos/Song remain restricted to administrators. Ensure any user-facing permission/lock text is in English and matches the new behavior.",
+      "featureId": "feature-add-the-user-uploaded-image-1770099054248-png-as-the-default-hero-section-background-so-it-displays-immediately-when-no-hero-background-has-been-uploaded-via-the-media-manager",
+      "featureTitle": "Add the user-uploaded image (1770099054248.png) as the default Hero section background so it displays immediately when no hero background has been uploaded via the Media Manager.",
       "files": [
-        "frontend/src/components/MediaManager.tsx",
-        "frontend/src/hooks/useMediaManagerPermissions.ts",
-        "frontend/src/hooks/usePublishWithPrecheck.ts"
+        "frontend/src/components/HeroSection.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -19,13 +17,54 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-63"
+        "REQ-1"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-update-media-manager-ui-copy-to-explicitly-tell-users-they-can-choose-images-from-their-phone-gallery-or-google-drive-via-the-device-file-picker-no-separate-google-drive-login",
-      "featureTitle": "Update Media Manager UI copy to explicitly tell users they can choose images from their phone gallery or Google Drive via the device file picker (no separate Google Drive login).",
+      "featureId": "feature-update-the-background-music-player-to-satisfy-the-hard-rules-background-audio-autoplays-silently-on-page-load-loops-continuously-uses-a-user-provided-mp3-uploaded-via-the-media-manager-shows-only-a-small-bottom-right-player-popup-with-play-pause-control-and-keeps-a-lightly-visible-audio-tag-on-screen-remove-any-ui-that-implies-required-user-interaction-e-g-tap-to-start-prompts",
+      "featureTitle": "Update the background music player to satisfy the HARD RULES: background audio autoplays silently on page load, loops continuously, uses a user-provided MP3 uploaded via the Media Manager, shows only a small bottom-right player popup with play/pause control, and keeps a lightly visible audio tag on-screen; remove any UI that implies required user interaction (e.g., “tap to start” prompts).",
+      "files": [
+        "frontend/src/components/MusicPlayer.tsx",
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-the-image-memory-section-renders-a-responsive-grid-of-43-image-cards-driven-by-the-existing-slot-configuration-with-each-card-clickable-tappable-to-perform-a-smooth-3d-rotate-flip-and-fade-in-romantic-message-reveal-on-the-back-keep-soft-shadow-and-rounded-corners",
+      "featureTitle": "Ensure the Image Memory section renders a responsive grid of 43 image cards driven by the existing slot configuration, with each card clickable/tappable to perform a smooth 3D rotate/flip and fade-in romantic message reveal on the back; keep soft shadow and rounded corners.",
+      "files": [
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-working-mode-media-manager-provide-clear-mobile-friendly-per-image-slot-controls-to-add-replace-images-open-the-drag-zoom-adjust-ui-reorder-drag-where-supported-and-save-submit-changes-so-updates-appear-in-the-image-memory-grid-after-submitting-publishing",
+      "featureTitle": "In “working mode” (Media Manager), provide clear, mobile-friendly per-image-slot controls to add/replace images, open the drag/zoom adjust UI, reorder (drag where supported), and save/submit changes so updates appear in the Image Memory grid after submitting/publishing.",
       "files": [
         "frontend/src/components/MediaManager.tsx"
       ],
@@ -39,7 +78,47 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-64"
+        "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-the-video-memory-section-renders-a-grid-of-6-videos-with-preserved-aspect-ratio-supports-adding-replacing-videos-via-the-media-manager-before-publishing-and-keeps-the-existing-mobile-friendly-playback-configuration-playsinline-looping-default-muted",
+      "featureTitle": "Ensure the Video Memory section renders a grid of 6 videos with preserved aspect ratio, supports adding/replacing videos via the Media Manager before publishing, and keeps the existing mobile-friendly playback configuration (playsInline, looping, default-muted).",
+      "files": [
+        "frontend/src/components/MediaManager.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-the-newly-bundled-hero-background-image-to-the-frontend-assets-and-reference-it-consistently-from-the-hero-section-and-or-media-store-defaulting-logic-without-routing-it-through-the-backend",
+      "featureTitle": "Add the newly bundled hero background image to the frontend assets and reference it consistently from the Hero section (and/or media store defaulting logic) without routing it through the backend.",
+      "files": [
+        "frontend/src/components/HeroSection.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
       ],
       "confidence": "high"
     }

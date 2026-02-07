@@ -1,76 +1,134 @@
 {
   "kind": "build_request",
-  "title": "Allow anyone to upload Image Memories using phone gallery or Google Drive picker",
+  "title": "Set uploaded hero background image and enforce autoplaying looping background music + memory grids behavior",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-62",
-      "text": "Update backend image publishing/clearing authorization so that ANY caller (including non-admin users) can publish and clear Image Memory slots (images index 0–42 / UI slots 1–43), without requiring the image-uploader allowlist. Keep Hero background, Video Memory slots, and Background Song admin-only.",
-      "target": "backend",
+      "id": "REQ-1",
+      "text": "Add the user-uploaded image (1770099054248.png) as the default Hero section background so it displays immediately when no hero background has been uploaded via the Media Manager.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "Give the access to anyone that they can add their images in this website through their phone gallery or Google drive"
+          "Add this image as background in hero section"
         ]
       },
       "acceptanceCriteria": [
-        "A non-admin principal can successfully call setImage(index, name, blob) and clearImage(index) for valid indices 0–42.",
-        "If an image index is out of range (>= 43), the backend still rejects with an 'Invalid image index' error.",
-        "Non-admin principals are still blocked from setHeroBackground/clearHeroBackground, setVideo/clearVideo, and setBackgroundSong/clearBackgroundSong with clear authorization errors.",
-        "Existing allowlist management APIs (getImageUploaderAllowlist/grant/revoke/hasImageUploaderAccess) may remain, but they no longer restrict image publishing/clearing."
+        "On a fresh load (no hero uploaded in the app), the Hero section background renders using the provided image.",
+        "If a hero background has been uploaded via the existing Media Manager flow, the uploaded hero background overrides the default image.",
+        "The image is bundled as a static frontend asset (not served via the backend)."
       ]
     },
     {
-      "id": "REQ-63",
-      "text": "Update frontend Media Manager permissions logic so that the Images tab is editable for all visitors (anyone), while Hero/Videos/Song remain restricted to administrators. Ensure any user-facing permission/lock text is in English and matches the new behavior.",
+      "id": "REQ-2",
+      "text": "Update the background music player to satisfy the HARD RULES: background audio autoplays silently on page load, loops continuously, uses a user-provided MP3 uploaded via the Media Manager, shows only a small bottom-right player popup with play/pause control, and keeps a lightly visible audio tag on-screen; remove any UI that implies required user interaction (e.g., “tap to start” prompts).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "BACKGROUND MUSIC (HARD RULE):\n- Background audio must autoplay silently on page load with play and pause button in down most right corner \nUse customised song in MP3 \n- Audio should loop continuously\n- just the player popup\n- NO user interaction required\n- Audio tag must be shown lightly\n- Mobile autoplay compatible"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When a song is present (songUrl exists), the audio element is configured for mobile-friendly autoplay behavior by starting muted and attempting playback automatically on page load.",
+        "Audio loops continuously.",
+        "A play/pause control is fixed at the bottom-right of the viewport and remains usable on mobile.",
+        "The <audio> element is lightly visible (not fully hidden) while still matching the popup style.",
+        "No “tap to start” or similar prompt is shown to the user."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Ensure the Image Memory section renders a responsive grid of 43 image cards driven by the existing slot configuration, with each card clickable/tappable to perform a smooth 3D rotate/flip and fade-in romantic message reveal on the back; keep soft shadow and rounded corners.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-3"
+        ],
+        "quotes": [
+          "IMAGE MEMORY SECTION:\n- Grid of image cards of 43 images(I can add unlimited images)\n-add images before publishing \n- Each image card must be clickable\n- On tap ROTATE + FADE MESSAGE (ROMANTIC SURPRISE) in 3d smooth form \n  - Back side shows a romantic message text\n- Smooth rotation animation\n- Soft shadow and rounded corners"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Image Memory section displays 43 slots by default in a grid layout that adapts from mobile to desktop.",
+        "Tapping/clicking a populated card flips/rotates in 3D and the message fades in on the back side.",
+        "Cards have rounded corners and a soft shadow in both front and back states.",
+        "Empty slots display an English empty-state message (existing behavior is acceptable)."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "In “working mode” (Media Manager), provide clear, mobile-friendly per-image-slot controls to add/replace images, open the drag/zoom adjust UI, reorder (drag where supported), and save/submit changes so updates appear in the Image Memory grid after submitting/publishing.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "Give the access to anyone that they can add their images in this website through their phone gallery or Google drive"
+          "* Show add or replace button and also drag to adjust option and save button in working mode"
         ]
       },
       "acceptanceCriteria": [
-        "When not an admin, the Media Manager still shows lock messaging for Hero/Videos/Song, but the Images tab allows Upload/Replace/Adjust/Clear/Reorder and Submit.",
-        "The Images tab no longer shows 'Administrator or image uploader access required' for non-admin users.",
-        "The submit flow in non-admin mode publishes only image-related changes (no hero/video/song actions attempted), and errors (if any) are shown in English without closing the dialog."
+        "For each image slot, the Media Manager UI exposes Add/Replace and Adjust controls without requiring hover.",
+        "Users can reorder image slots using drag-and-drop where supported and/or existing alternative controls for mobile.",
+        "After the user clicks the existing primary submit/save action in the Media Manager, the Image Memory grid reflects the changes without requiring a page refresh."
       ]
     },
     {
-      "id": "REQ-64",
-      "text": "Update Media Manager UI copy to explicitly tell users they can choose images from their phone gallery or Google Drive via the device file picker (no separate Google Drive login).",
+      "id": "REQ-5",
+      "text": "Ensure the Video Memory section renders a grid of 6 videos with preserved aspect ratio, supports adding/replacing videos via the Media Manager before publishing, and keeps the existing mobile-friendly playback configuration (playsInline, looping, default-muted).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-5"
         ],
         "quotes": [
-          "through their phone gallery or Google drive"
+          "Video Memory Section :\n - grid of videos as it is the ratio 6 videos by adding videos before publishing"
         ]
       },
       "acceptanceCriteria": [
-        "Media Manager includes a short, clear English instruction near image uploading controls, e.g., indicating that the upload picker may offer 'Photos' or 'Google Drive' depending on the device.",
-        "No UI implies a Google Drive OAuth/login integration or requires connecting a Drive account inside the app."
+        "The Video Memory section shows exactly 6 slots.",
+        "Uploaded videos render with consistent aspect ratio handling across the grid.",
+        "Videos can be added/replaced through the existing Media Manager flow and appear after submit/publish.",
+        "Videos remain mobile-friendly (playsInline) and loop continuously."
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Add the newly bundled hero background image to the frontend assets and reference it consistently from the Hero section (and/or media store defaulting logic) without routing it through the backend.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Add this image as background in hero section"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The image file is stored under frontend/public/assets/generated and loaded via a static URL.",
+        "No backend API calls are required to display the default hero background."
       ]
     }
   ],
   "constraints": [
-    "Respect the single-actor Motoko backend architecture; keep logic changes in backend/main.mo.",
-    "Do not edit any frontend files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
-    "All user-facing text must be in English.",
-    "Do not add third-party authentication or Google Drive API/OAuth integration; rely on the device/system file picker for Drive selection."
+    "Backend must remain a single Motoko actor in backend/main.mo; do not introduce additional backend services.",
+    "Do not edit any files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
+    "All user-facing text must be in English (except user-provided content already embedded in the hero text)."
   ],
   "nonGoals": [
-    "Adding a full Google Drive integration (OAuth, browsing Drive inside the app, Drive API calls).",
-    "Changing admin-only permissions for Hero background, Video Memories, or Background Song.",
-    "Introducing new backend services, databases, or multi-canister architecture."
+    "Fixing the platform/internal deployment configuration error (this requires Caffeine platform intervention).",
+    "Adding third-party auth providers, external databases, or non-Internet-Identity login methods.",
+    "Adding real-time features (WebSockets/chat) or external media hosting integrations."
   ],
   "imageRequirements": {
-    "required": [],
+    "required": [
+      "Watercolor-style couple illustration with pink floral background and title text (hero-bg.dim_736x964.png)"
+    ],
     "edits": []
   },
   "userProfileUpdate": {

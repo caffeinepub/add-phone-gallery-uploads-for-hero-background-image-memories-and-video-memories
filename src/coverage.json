@@ -1,60 +1,104 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-06T04:04:25.278Z",
+  "generatedAt": "2026-02-07T01:28:09.288Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 2,
+    "total": 6,
+    "implemented": 6,
     "items": [
       {
-        "id": "REQ-62",
-        "summary": "Update backend image publishing/clearing authorization so that ANY caller (including non-admin users) can publish and clear Image Memory slots (images index 0–42 / UI slots 1–43), without requiring the image-uploader allowlist. Keep Hero background, Video Memory slots, and Background Song admin-only.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-63",
-        "summary": "Update frontend Media Manager permissions logic so that the Images tab is editable for all visitors (anyone), while Hero/Videos/Song remain restricted to administrators. Ensure any user-facing permission/lock text is in English and matches the new behavior.",
+        "id": "REQ-1",
+        "summary": "Add the user-uploaded image (1770099054248.png) as the default Hero section background so it displays immediately when no hero background has been uploaded via the Media Manager.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useMediaManagerPermissions.ts",
-          "frontend/src/components/MediaManager.tsx",
-          "frontend/src/hooks/usePublishWithPrecheck.ts"
+          "frontend/src/components/HeroSection.tsx",
+          "frontend/src/context/MediaStoreContext.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useMediaManagerPermissions.ts",
-          "frontend/src/components/MediaManager.tsx",
-          "frontend/src/hooks/usePublishWithPrecheck.ts"
+          "frontend/src/components/HeroSection.tsx"
         ]
       },
       {
-        "id": "REQ-64",
-        "summary": "Update Media Manager UI copy to explicitly tell users they can choose images from their phone gallery or Google Drive via the device file picker (no separate Google Drive login).",
+        "id": "REQ-2",
+        "summary": "Update the background music player to satisfy the HARD RULES: background audio autoplays silently on page load, loops continuously, uses a user-provided MP3 uploaded via the Media Manager, shows only a small bottom-right player popup with play/pause control, and keeps a lightly visible audio tag on-screen; remove any UI that implies required user interaction (e.g., “tap to start” prompts).",
         "status": "implemented",
         "plannedFiles": [
+          "frontend/src/components/MusicPlayer.tsx",
+          "frontend/src/index.css"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/MusicPlayer.tsx",
+          "frontend/src/index.css"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Ensure the Image Memory section renders a responsive grid of 43 image cards driven by the existing slot configuration, with each card clickable/tappable to perform a smooth 3D rotate/flip and fade-in romantic message reveal on the back; keep soft shadow and rounded corners.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/ImageMemorySection.tsx",
+          "frontend/src/components/FlipImageCard.tsx",
+          "frontend/src/index.css"
+        ],
+        "matchedFiles": [
+          "frontend/src/index.css"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "In “working mode” (Media Manager), provide clear, mobile-friendly per-image-slot controls to add/replace images, open the drag/zoom adjust UI, reorder (drag where supported), and save/submit changes so updates appear in the Image Memory grid after submitting/publishing.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/MediaManager.tsx",
+          "frontend/src/hooks/useMediaDraft.ts",
+          "frontend/src/context/MediaStoreContext.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/MediaManager.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Ensure the Video Memory section renders a grid of 6 videos with preserved aspect ratio, supports adding/replacing videos via the Media Manager before publishing, and keeps the existing mobile-friendly playback configuration (playsInline, looping, default-muted).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/VideoMemorySection.tsx",
           "frontend/src/components/MediaManager.tsx"
         ],
         "matchedFiles": [
           "frontend/src/components/MediaManager.tsx"
+        ]
+      },
+      {
+        "id": "REQ-6",
+        "summary": "Add the newly bundled hero background image to the frontend assets and reference it consistently from the Hero section (and/or media store defaulting logic) without routing it through the backend.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/public/assets/generated/hero-bg.dim_736x964.png",
+          "frontend/src/components/HeroSection.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/public/assets/generated/hero-bg.dim_736x964.png",
+          "frontend/src/components/HeroSection.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
+    "caffeine.lock.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/public/assets/generated/hero-bg.dim_736x964.png",
+    "frontend/src/components/HeroSection.tsx",
     "frontend/src/components/MediaManager.tsx",
-    "frontend/src/hooks/useMediaManagerPermissions.ts",
-    "frontend/src/hooks/usePublishWithPrecheck.ts",
+    "frontend/src/components/MusicPlayer.tsx",
+    "frontend/src/index.css",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

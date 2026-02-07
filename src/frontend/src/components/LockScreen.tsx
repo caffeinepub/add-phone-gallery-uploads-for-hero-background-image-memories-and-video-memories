@@ -5,6 +5,8 @@ interface LockScreenProps {
   onUnlock: (password: string) => boolean;
 }
 
+const loginEmojis = ['🐶', '🧿', '🎀', '🫂', '❤️', '🌹', '🛐', '🌍'];
+
 export default function LockScreen({ onUnlock }: LockScreenProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +26,23 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 bg-gradient-to-br from-rose-100 via-pink-50 to-rose-50">
-      <div className="w-full max-w-sm">
+      {/* Floating blinking emojis */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {loginEmojis.map((emoji, index) => (
+          <div
+            key={index}
+            className="login-emoji"
+            style={{
+              left: `${(index * 12.5) + 5}%`,
+              animationDelay: `${index * 0.3}s`,
+            }}
+          >
+            {emoji}
+          </div>
+        ))}
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
         <div className={`bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-2 border-rose-200/50 ${isShaking ? 'animate-shake' : ''}`}>
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-rose-400 to-pink-500 rounded-full mb-4 shadow-lg">

@@ -29,15 +29,16 @@ export default function FlipImageCard({ imageSrc, message, transform }: FlipImag
       role="button"
       tabIndex={0}
       aria-label={isFlipped ? 'Showing message, tap to see image' : 'Showing image, tap to reveal message'}
+      aria-pressed={isFlipped}
     >
       <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
         {/* Front - Image */}
         <div className="flip-card-front">
-          <div className="w-full h-full overflow-hidden">
+          <div className="flip-card-image-container">
             <img
               src={imageSrc}
               alt="Memory"
-              className="w-full h-full object-cover"
+              className="flip-card-image"
               loading="eager"
               style={
                 transform
@@ -49,16 +50,16 @@ export default function FlipImageCard({ imageSrc, message, transform }: FlipImag
               }
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-          <div className="absolute bottom-2 right-2 text-white text-xs bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
+          <div className="flip-card-overlay" />
+          <div className="flip-card-hint">
             Tap to reveal 💕
           </div>
         </div>
 
         {/* Back - Message */}
         <div className="flip-card-back">
-          <div className="flex items-center justify-center h-full p-4">
-            <p className="text-center text-sm md:text-base leading-relaxed text-white">
+          <div className="flip-card-message-container">
+            <p className={`flip-card-message ${isFlipped ? 'fade-in' : ''}`}>
               {message || 'A special memory just for you 💕'}
             </p>
           </div>

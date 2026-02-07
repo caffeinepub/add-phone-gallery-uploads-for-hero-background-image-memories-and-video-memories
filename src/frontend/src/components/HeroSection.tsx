@@ -1,6 +1,7 @@
 import { Sparkles, Upload } from 'lucide-react';
 import { useMediaStore } from '../hooks/useMediaStore';
 import { Button } from './ui/button';
+import { useRef } from 'react';
 
 interface HeroSectionProps {
   onOpenMediaManager?: () => void;
@@ -8,24 +9,41 @@ interface HeroSectionProps {
 
 export default function HeroSection({ onOpenMediaManager }: HeroSectionProps) {
   const { heroBackgroundUrl } = useMediaStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onOpenMediaManager) {
+      // Open media manager to handle the upload
+      onOpenMediaManager();
+    }
+  };
+
+  // Use uploaded hero background if available, otherwise fall back to bundled default
+  const backgroundImageUrl = heroBackgroundUrl || '/assets/generated/hero-bg.dim_736x964.png';
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-rose-100"
-        style={heroBackgroundUrl ? { backgroundImage: `url(${heroBackgroundUrl})` } : undefined}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${backgroundImageUrl})` }}
       >
-        {!heroBackgroundUrl && (
-          <div className="absolute inset-0 flex items-center justify-center text-rose-300">
-            <div className="text-center">
-              <Sparkles className="w-16 h-16 mx-auto mb-4" />
-              <p className="text-lg font-medium">No hero background uploaded</p>
-            </div>
-          </div>
-        )}
         <div className="absolute inset-0 bg-gradient-to-b from-rose-900/40 via-pink-900/30 to-rose-900/50" />
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpg,image/jpeg"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {/* Media Manager Button */}
       {onOpenMediaManager && (

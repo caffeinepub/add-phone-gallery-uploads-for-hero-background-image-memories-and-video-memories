@@ -1,60 +1,74 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-06T04:04:25.274Z",
-  "summary": "Frontend permissions hook was updated to make Images editable for everyone, and backend was updated to use a migration module on deploy; however, the diff summary does not provide clear evidence that backend setImage/clearImage authorization was changed as required, nor that Media Manager UI copy and non-admin submit behavior were updated per the acceptance criteria.",
+  "generatedAt": "2026-02-07T01:28:09.285Z",
+  "summary": "REQ-2 appears largely implemented in MusicPlayer (muted autoplay attempt, looping, bottom-right play/pause popup, visible <audio> with controls, no tap-to-start prompt). HeroSection adds a static fallback background URL, but the diff does not add the required image asset nor reference the requested default filename. No diff evidence confirms the Image Memory / Video Memory grid requirements or the Media Manager per-slot mobile controls.",
   "missing_requirements": [
     {
-      "id": "REQ-62",
-      "requirement": "Update backend image publishing/clearing authorization so that ANY caller (including non-admin users) can publish and clear Image Memory slots (indices 0–42), while keeping Hero/Video/Song admin-only and preserving invalid-index errors.",
-      "reason": "The backend diff is truncated before any setImage/clearImage/setHeroBackground/setVideo/setBackgroundSong authorization logic is shown, so there is no explicit evidence that the image allowlist restriction was removed for publishing/clearing or that admin-only restrictions for hero/video/song remain enforced with clear authorization errors.",
+      "id": "REQ-1",
+      "requirement": "Add the user-uploaded image (1770099054248.png) as the default Hero background when no uploaded hero background exists, and allow uploaded hero background to override it.",
+      "reason": "HeroSection falls back to '/assets/generated/hero-bg.dim_736x964.png' rather than the requested '1770099054248.png'. Also, the diff does not show bundling the requested image asset.",
       "evidence": [
-        "backend/main.mo (truncated; no visible setImage/clearImage or related auth checks)"
+        "frontend/src/components/HeroSection.tsx"
       ]
     },
     {
-      "id": "REQ-63",
-      "requirement": "Update Media Manager permissions logic so Images tab is editable for all visitors, while Hero/Videos/Song remain admin-only; ensure Images tab no longer shows old lock text; non-admin submit publishes only image changes and shows errors in English without closing.",
-      "reason": "While canEditImages is set to true for everyone, the diff summary does not show the MediaManager UI changes needed to remove/replace the prior lock messaging on Images, nor does it show the submit flow logic ensuring non-admins only attempt image operations and keep the dialog open on errors.",
+      "id": "REQ-3",
+      "requirement": "Ensure Image Memory section renders a responsive grid of 43 image cards with 3D flip/rotate and fade-in message reveal, rounded corners, and soft shadow.",
+      "reason": "No diff evidence shows changes or confirmation for ImageMemorySection / flip-card rendering behavior, slot count (43), or animations.",
       "evidence": [
-        "frontend/src/hooks/useMediaManagerPermissions.ts",
-        "frontend/src/components/MediaManager.tsx (truncated; submit/lock messaging not visible)"
+        "frontend-file-summaries.txt"
       ]
     },
     {
-      "id": "REQ-64",
-      "requirement": "Update Media Manager UI copy to tell users they can choose images from phone gallery or Google Drive via the device file picker (no separate Google login).",
-      "reason": "No explicit new instruction/copy about selecting from 'Photos' or 'Google Drive' via the system picker is visible in the provided truncated MediaManager diff.",
+      "id": "REQ-4",
+      "requirement": "In Media Manager working mode, provide clear mobile-friendly per-image-slot controls (add/replace, adjust, reorder) and ensure grid updates after submit without refresh.",
+      "reason": "MediaManager.tsx diff is truncated and does not show the per-slot controls UI, reorder interactions, or post-publish refresh behavior in the Image Memory grid.",
       "evidence": [
-        "frontend/src/components/MediaManager.tsx (truncated; no visible instructional copy)"
+        "frontend/src/components/MediaManager.tsx (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Ensure Video Memory section renders a grid of exactly 6 videos with preserved aspect ratio, add/replace via Media Manager, playsInline + looping + default-muted.",
+      "reason": "No diff evidence shows changes or confirmation for VideoMemorySection behavior, slot count (6), aspect ratio handling, or playback attributes.",
+      "evidence": [
+        "frontend-file-summaries.txt"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "requirement": "Add the newly bundled hero background image to frontend/public/assets/generated and reference it via static URL (no backend routing).",
+      "reason": "No files were added in the diff, so the required asset placement under frontend/public/assets/generated is not evidenced.",
+      "evidence": [
+        "<file-diff>: ADDED FILES: none",
+        "frontend/src/components/HeroSection.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Introduced a backend migration module and wired it into the actor deployment using `(with migration = Migration.run)`.",
-      "reason": "The BuildRequest did not request any data migration work; additionally, the constraints emphasized keeping backend logic changes in `backend/main.mo`, but this change adds a new backend file and imports it.",
+      "description": "Added a hidden file input and local file selection handler in HeroSection (file input ref + click/select handlers) even though uploading is supposed to be handled via the existing Media Manager flow.",
+      "reason": "BuildRequest only asks to set a default hero background asset and keep Media Manager override behavior; it does not request adding a file input element in the Hero section.",
       "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo (imports Migration; `(with migration = Migration.run)`)"
+        "frontend/src/components/HeroSection.tsx"
       ]
     },
     {
-      "description": "Added frontend backend-error translation logic producing standardized English error titles/messages.",
-      "reason": "Not explicitly requested as a feature; while it may help meet the 'errors shown in English' acceptance criteria, the BuildRequest did not ask for a new translation layer as a discrete addition.",
+      "description": "Displays a fixed bottom-right 'No song uploaded' UI when there is no songUrl.",
+      "reason": "REQ-2 specifies behavior when a song is present and the desired player popup; it does not request adding an explicit disabled-state popup message when no song is uploaded.",
       "evidence": [
-        "frontend/src/hooks/usePublishWithPrecheck.ts (translateBackendError function)"
+        "frontend/src/components/MusicPlayer.tsx"
       ]
     }
   ],
-  "confidence": 0.56,
+  "confidence": 0.66,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
+    "frontend/src/components/HeroSection.tsx",
     "frontend/src/components/MediaManager.tsx",
-    "frontend/src/hooks/useMediaManagerPermissions.ts",
-    "frontend/src/hooks/usePublishWithPrecheck.ts",
+    "frontend/src/components/MusicPlayer.tsx",
+    "frontend/src/index.css",
     "project_state.json"
   ]
 }

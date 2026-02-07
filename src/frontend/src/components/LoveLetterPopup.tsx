@@ -13,7 +13,8 @@ You're Perfect For Me In Every Way, My Love 🐶🫀🌍 ,
 Thank You For Taking The Risk🤌🏻 Of Loving 🤌🏻Me 🙇🏻🫂When It Wasn't Easy. You Stepped Into My World With Patience, Softness, And An Open Heart 😚. You Saw My Walls🥺, My Doubts🥺, My Quiet Fears🥺, And Still Chose To Stay🙇🏻. Your Love Feels Like Something Steady 🥰When My Mind Isn't🛐. It Reaches The Parts Of Me I Never Knew How To Explain🥺🤌🏻. I'm Grateful That You Chose Me, Even On The Days I Struggle To Choose Myself 🙇🏻`;
 
 export default function LoveLetterPopup({ open, onClose }: LoveLetterPopupProps) {
-  const { displayedText } = useTypingText(open ? loveLetterText : '', 20);
+  // 0.5x speed means slower, so we increase the delay (50ms instead of default 20ms)
+  const { displayedText } = useTypingText(open ? loveLetterText : '', 50);
 
   if (!open) return null;
 

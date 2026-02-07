@@ -1,603 +1,61 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 45,
-  "summary": "ICP canister dapp scaffolded with a Motoko backend and a React + Tailwind (shadcn/ui) frontend for an interactive romantic/“surprise” experience, including Internet Identity login gating, configurable memory sections (images/videos), popups (love letter/proposal), and animated visual effects, plus an in-app Media Manager that supports broad/public image-upload access (any user) and additional import sources (phone gallery and Google Drive), packaged with build/deploy templates for IC.",
+  "projectStateVersion": 3,
+  "summary": "Romantic media web page with hero background image, autoplaying looping background music, and image/video memory grids featuring 3D flip/rotate animations with romantic message reveals plus simple content management controls.",
   "architectural_notes": [
-    "Frontend uses React + Vite with TailwindCSS and shadcn/ui component set.",
-    "Authentication integrates Internet Identity; app access is gated via a session/lock screen flow.",
-    "Content is largely config-driven (messages and image/video memory configs).",
-    "Includes IC canister scaffolding (Motoko backend, Candid bindings) plus deploy/build template scripts.",
-    "Media Manager 'Submit' action should atomically apply/publish all staged media changes so the Image section shows all submitted photos and the Video section shows all submitted videos after submission.",
-    "Media Manager should provide per-slot controls to add/replace media from phone gallery across Hero, Image grid, and Video grid; include drag/reorder and per-item adjust flows.",
-    "Preview vs Live workflow should clearly display the currently uploaded/staged media (hero, image grid, video grid, song) before publishing; simplify/remove confusing Media Manager “Edit” entry control to make the preview flow obvious.",
-    "User requirement: Draft = Preview = Published must render only uploaded media (no placeholders/fallbacks), with identical behavior across modes (no regeneration/reset, no lazy loading or hiding).",
-    "Revise media-management access control: allow public/any-user image uploads (no allowlist) as requested; reassess II gating vs edit permissions accordingly.",
-    "Support importing images from Google Drive in addition to local device gallery/file picker (requires OAuth/Drive picker integration and file-to-blob ingest path)."
+    "Mobile autoplay policies may require starting audio muted and only enabling sound after an explicit user gesture; design player behavior accordingly."
   ],
   "known_issues": [
-    "Media Manager \"Submit\" button is not working (click does not apply/publish staged draft changes).",
-    "After attempting to submit, not all uploaded/staged images become visible in the Image Memory section as expected.",
-    "Uploaded Hero section background image is not visible after using the media add/replace flow (no visible result).",
-    "Uploaded/replaced images are not visible in the Image Memory section after using the media add/replace flow (no visible result).",
-    "Image Memory section shows a pink blank page/popup instead of displaying the uploaded image(s).",
-    "Clicking an uploaded image should show the configured popup message, but currently shows a pink/blank popup instead.",
-    "Production deployment/publish of the latest draft fails with a deployment error.",
-    "Draft mode shows uploaded images/videos, but after publishing the live/production version does not display the uploaded media (appears blank/pink or missing).",
-    "Published/production mode still does not display uploaded images/videos or the uploaded background song (only the Hero background image shows), indicating media persistence/rehydration mismatch between draft and published builds.",
-    "Uploaded media (hero image, image memories, video memories) is not visible in preview/live as expected; user requests clear pre-publish preview before pushing live."
+    "Build/deploy failing due to internal configuration error; may require platform (Caffeine) team intervention."
   ],
   "isFixRequest": false,
+  "imageRequirements": "## Required Images\n- Watercolor-style couple illustration with pink floral background and title text (hero-bg.dim_736x964.png)",
   "existing_features": [
     {
-      "id": "IF-1",
-      "title": "Motoko backend canister scaffold",
-      "synonyms": [
-        "backend canister",
-        "Motoko service"
-      ],
-      "description": "Backend canister implemented in Motoko (main.mo) with generated Candid bindings and frontend actor typing integration.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-2",
-      "title": "React + Vite frontend scaffold with Tailwind and shadcn/ui components",
-      "synonyms": [
-        "frontend scaffold",
-        "UI component library"
-      ],
-      "description": "Frontend built with React/Vite and TailwindCSS, including a large set of shadcn/ui components and utility hooks/config.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-3",
-      "title": "Internet Identity authentication and session gating",
-      "synonyms": [
-        "II auth",
-        "login gate",
-        "session gate"
-      ],
-      "description": "Client-side authentication via Internet Identity with hooks to manage identity/actor and gate access to the experience behind a lock/session screen.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-4",
-      "title": "Config-driven romantic experience content",
-      "synonyms": [
-        "content configuration",
-        "romantic messages config"
-      ],
-      "description": "Centralized configuration for romantic messages and memory content (image/video memory configs) used to drive UI sections.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-5",
-      "title": "Interactive experience UI: hero, surprise section, and popups",
-      "synonyms": [
-        "love letter popup",
-        "proposal popup",
-        "intro popup"
-      ],
-      "description": "Core experience screens/sections including HeroSection, SurpriseSection, IntroPopup, LoveLetterPopup, and ProposalPopup components.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-6",
-      "title": "Memory sections for images and videos",
-      "synonyms": [
-        "image memories",
-        "video memories"
-      ],
-      "description": "Dedicated UI sections for displaying image and video memories (ImageMemorySection, VideoMemorySection) driven by config.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-7",
-      "title": "Music player component",
-      "synonyms": [
-        "background music"
-      ],
-      "description": "Frontend MusicPlayer component for playing audio as part of the experience.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-8",
-      "title": "Animated romantic visual effects",
-      "synonyms": [
-        "floating hearts",
-        "rose petals"
-      ],
-      "description": "Animated UI effects/components including FloatingHearts and RosePetals plus supporting UI elements (e.g., FlipImageCard).",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-9",
-      "title": "IC build/deploy template and repository scaffolding",
-      "synonyms": [
-        "build template",
-        "deploy scripts",
-        "Dockerfile"
-      ],
-      "description": "Build template assets including Dockerfile, scripts for pruning/resizing images, IC canister YAMLs, workspace/package configs, and deploy.sh for IC deployment.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "feature-add-a-frontend-only-media-upload-persistence-flow-that-lets-the-user-pick-files-from-their-phone-gallery-and-have-the-app-display-those-files-and-keep-them-after-refresh-for-1-the-hero-section-background-2-the-image-memory-section-images-and-3-the-video-memory-section-videos",
-      "title": "Add a frontend-only media upload + persistence flow that lets the user pick files from their phone gallery and have the app display those files (and keep them after refresh) for: (1) the Hero section background, (2) the Image Memory section images, and (3) the Video Memory section videos.",
+      "id": "feature-add-the-user-uploaded-image-1770099054248-png-as-the-default-hero-section-background-so-it-displays-immediately-when-no-hero-background-has-been-uploaded-via-the-media-manager",
+      "title": "Add the user-uploaded image (1770099054248.png) as the default Hero section background so it displays immediately when no hero background has been uploaded via the Media Manager.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-implement-a-simple-in-app-media-management-ui-mobile-first-that-provides-controls-to-upload-replace-the-hero-background-image-bulk-upload-replace-image-memory-photos-and-bulk-upload-replace-video-memory-videos-include-clear-english-labels-and-brief-instructions-in-the-ui",
-      "title": "Implement a simple in-app \"Media\" management UI (mobile-first) that provides controls to: upload/replace the hero background image, bulk upload/replace Image Memory photos, and bulk upload/replace Video Memory videos; include clear English labels and brief instructions in the UI.",
+      "id": "feature-update-the-background-music-player-to-satisfy-the-hard-rules-background-audio-autoplays-silently-on-page-load-loops-continuously-uses-a-user-provided-mp3-uploaded-via-the-media-manager-shows-only-a-small-bottom-right-player-popup-with-play-pause-control-and-keeps-a-lightly-visible-audio-tag-on-screen-remove-any-ui-that-implies-required-user-interaction-e-g-tap-to-start-prompts",
+      "title": "Update the background music player to satisfy the HARD RULES: background audio autoplays silently on page load, loops continuously, uses a user-provided MP3 uploaded via the Media Manager, shows only a small bottom-right player popup with play/pause control, and keeps a lightly visible audio tag on-screen; remove any UI that implies required user interaction (e.g., “tap to start” prompts).",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-herosection-imagememorysection-imagememorydata-usage-and-videomemorysection-videomemorydata-usage-so-that-each-media-reference-first-checks-for-an-uploaded-file-from-the-local-persisted-store-and-otherwise-uses-the-existing-static-placeholder-paths",
-      "title": "Update HeroSection, ImageMemorySection/imageMemoryData usage, and VideoMemorySection/videoMemoryData usage so that each media reference first checks for an uploaded file (from the local persisted store) and otherwise uses the existing static placeholder paths.",
+      "id": "feature-ensure-the-image-memory-section-renders-a-responsive-grid-of-43-image-cards-driven-by-the-existing-slot-configuration-with-each-card-clickable-tappable-to-perform-a-smooth-3d-rotate-flip-and-fade-in-romantic-message-reveal-on-the-back-keep-soft-shadow-and-rounded-corners",
+      "title": "Ensure the Image Memory section renders a responsive grid of 43 image cards driven by the existing slot configuration, with each card clickable/tappable to perform a smooth 3D rotate/flip and fade-in romantic message reveal on the back; keep soft shadow and rounded corners.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-frontend-public-placeholder-media-readme-txt-to-document-the-new-in-app-phone-gallery-upload-option-while-keeping-the-existing-drop-files-into-frontend-public-replacement-method-intact",
-      "title": "Update frontend/public/PLACEHOLDER_MEDIA_README.txt to document the new in-app phone-gallery upload option while keeping the existing \"drop files into frontend/public\" replacement method intact.",
+      "id": "feature-in-working-mode-media-manager-provide-clear-mobile-friendly-per-image-slot-controls-to-add-replace-images-open-the-drag-zoom-adjust-ui-reorder-drag-where-supported-and-save-submit-changes-so-updates-appear-in-the-image-memory-grid-after-submitting-publishing",
+      "title": "In “working mode” (Media Manager), provide clear, mobile-friendly per-image-slot controls to add/replace images, open the drag/zoom adjust UI, reorder (drag where supported), and save/submit changes so updates appear in the Image Memory grid after submitting/publishing.",
       "reqIds": [
         "REQ-4"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-the-image-memory-grid-so-that-the-specific-selected-card-element-html-1-body-1-div-1-div-1-main-1-section-2-div-1-div-1-div-2-div-1-div-1-div-1-displays-the-user-provided-uploaded-image-snapchat-390521611-jpg-as-its-front-image",
-      "title": "Update the Image Memory grid so that the specific selected card element (/html[1]/body[1]/div[1]/div[1]/main[1]/section[2]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]) displays the user-provided uploaded image (Snapchat-390521611.jpg) as its front image.",
+      "id": "feature-ensure-the-video-memory-section-renders-a-grid-of-6-videos-with-preserved-aspect-ratio-supports-adding-replacing-videos-via-the-media-manager-before-publishing-and-keeps-the-existing-mobile-friendly-playback-configuration-playsinline-looping-default-muted",
+      "title": "Ensure the Video Memory section renders a grid of 6 videos with preserved aspect ratio, supports adding/replacing videos via the Media Manager before publishing, and keeps the existing mobile-friendly playback configuration (playsInline, looping, default-muted).",
       "reqIds": [
         "REQ-5"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-the-existing-media-manager-popup-dialog-so-that-media-changes-uploads-replacements-clears-reorders-are-staged-as-a-pending-draft-and-are-only-applied-to-the-live-app-after-the-user-clicks-a-new-primary-action-button-labeled-submit",
-      "title": "Update the existing Media Manager popup (dialog) so that media changes (uploads/replacements/clears/reorders) are staged as a pending draft and are only applied to the live app after the user clicks a new primary action button labeled \"Submit\".",
+      "id": "feature-add-the-newly-bundled-hero-background-image-to-the-frontend-assets-and-reference-it-consistently-from-the-hero-section-and-or-media-store-defaulting-logic-without-routing-it-through-the-backend",
+      "title": "Add the newly bundled hero background image to the frontend assets and reference it consistently from the Hero section (and/or media store defaulting logic) without routing it through the backend.",
       "reqIds": [
         "REQ-6"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-drag-and-drop-support-in-the-media-manager-images-grid-to-let-the-user-drag-an-image-slot-and-drop-it-onto-another-slot-to-reorder-swap-images-before-submitting",
-      "title": "Add drag-and-drop support in the Media Manager Images grid to let the user drag an image slot and drop it onto another slot to reorder/swap images before submitting.",
-      "reqIds": [
-        "REQ-7"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-an-adjust-control-for-each-uploaded-image-slot-in-the-media-manager-that-opens-a-simple-adjustment-ui-allowing-the-user-to-reposition-pan-and-zoom-the-image-within-its-frame-with-the-adjustment-saved-and-applied-in-both-the-media-manager-preview-and-the-image-memory-grid-after-submit",
-      "title": "Add an \"Adjust\" control for each uploaded image slot in the Media Manager that opens a simple adjustment UI allowing the user to reposition (pan) and zoom the image within its frame, with the adjustment saved and applied in both the Media Manager preview and the Image Memory grid after submit.",
-      "reqIds": [
-        "REQ-8"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-media-manager-submit-flow-so-that-when-the-user-clicks-submit-all-staged-draft-image-uploads-become-visible-in-the-image-memory-section-immediately-without-requiring-a-refresh-respecting-the-draft-image-order-and-any-saved-per-slot-adjustments-pan-zoom",
-      "title": "Update the Media Manager “Submit” flow so that when the user clicks Submit, all staged (draft) image uploads become visible in the Image Memory section immediately (without requiring a refresh), respecting the draft image order and any saved per-slot adjustments (pan/zoom).",
-      "reqIds": [
-        "REQ-9"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-media-manager-submit-flow-so-that-when-the-user-clicks-submit-all-staged-draft-video-uploads-become-visible-in-the-video-memory-section-immediately-without-requiring-a-refresh",
-      "title": "Update the Media Manager “Submit” flow so that when the user clicks Submit, all staged (draft) video uploads become visible in the Video Memory section immediately (without requiring a refresh).",
-      "reqIds": [
-        "REQ-10"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-media-manager-draft-state-is-initialized-from-the-current-persisted-live-media-state-when-the-dialog-opens-current-image-order-current-transforms-and-currently-uploaded-media-so-submit-publishes-changes-relative-to-what-the-user-already-has",
-      "title": "Ensure the Media Manager draft state is initialized from the current persisted/live media state when the dialog opens (current image order, current transforms, and currently uploaded media), so Submit publishes changes relative to what the user already has.",
-      "reqIds": [
-        "REQ-11"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-when-applying-a-submitted-draft-handle-all-supported-draft-operations-consistently-for-both-images-and-videos-including-clearing-a-slot-if-the-draft-indicates-a-clear-so-the-corresponding-section-falls-back-to-its-placeholder-media-for-that-slot",
-      "title": "When applying a submitted draft, handle all supported draft operations consistently for both images and videos, including clearing a slot (if the draft indicates a clear) so the corresponding section falls back to its placeholder media for that slot.",
-      "reqIds": [
-        "REQ-12"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-the-media-manager-submit-button-so-that-clicking-it-reliably-publishes-the-staged-draft-changes-hero-image-video-uploads-clears-reorders-and-per-slot-image-adjustments-to-the-live-mediastore-state-without-requiring-a-refresh",
-      "title": "Fix the Media Manager \"Submit\" button so that clicking it reliably publishes the staged draft changes (hero/image/video uploads, clears, reorders, and per-slot image adjustments) to the live MediaStore state without requiring a refresh.",
-      "reqIds": [
-        "REQ-13"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-media-manager-submit-button-becomes-enabled-whenever-there-are-meaningful-pending-draft-changes-including-image-reordering-changes-and-image-transform-pan-zoom-changes-not-only-new-uploads-clears",
-      "title": "Ensure the Media Manager \"Submit\" button becomes enabled whenever there are meaningful pending draft changes, including image reordering changes and image transform (pan/zoom) changes, not only new uploads/clears.",
-      "reqIds": [
-        "REQ-14"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-make-all-uploaded-images-visible-in-the-image-memory-section-after-submit-by-ensuring-the-image-memory-grid-renders-using-the-latest-mediastorecontext-state-uploaded-image-urls-current-image-order-and-current-transforms-immediately-after-draft-publication",
-      "title": "Make all uploaded images visible in the Image Memory section after Submit by ensuring the Image Memory grid renders using the latest MediaStoreContext state (uploaded image URLs, current image order, and current transforms) immediately after draft publication.",
-      "reqIds": [
-        "REQ-15"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-mediastorecontext-state-updates-so-multiple-sequential-uploads-clears-in-a-single-submit-do-not-overwrite-each-other-due-to-stale-react-state-closures-especially-for-imageurls-and-videourls-maps-ensure-that-uploading-replacing-multiple-images-or-videos-in-one-submit-results-in-all-corresponding-slots-being-updated-in-the-live-store-state",
-      "title": "Fix MediaStoreContext state updates so multiple sequential uploads/clears in a single Submit do not overwrite each other due to stale React state closures (especially for imageUrls and videoUrls Maps). Ensure that uploading/replacing multiple images (or videos) in one submit results in all corresponding slots being updated in the live store state.",
-      "reqIds": [
-        "REQ-16"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-media-manager-submit-action-reliably-publishes-all-draft-changes-hero-upload-clear-image-upload-clear-video-upload-clear-image-order-changes-and-image-transform-changes-every-time-the-user-clicks-submit-and-that-the-dialog-closes-only-after-publication-completes-successfully",
-      "title": "Ensure the Media Manager Submit action reliably publishes all draft changes (hero upload/clear, image upload/clear, video upload/clear, image order changes, and image transform changes) every time the user clicks Submit, and that the dialog closes only after publication completes successfully.",
-      "reqIds": [
-        "REQ-17"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-lightweight-in-app-debugging-visibility-for-the-submit-flow-to-help-identify-why-users-might-not-see-uploaded-images-e-g-log-a-single-structured-console-message-per-submit-with-counts-of-uploaded-cleared-images-videos-and-whether-imageorder-transforms-changed-all-user-facing-text-must-be-in-english",
-      "title": "Add lightweight in-app debugging visibility for the Submit flow to help identify why users might not see uploaded images (e.g., log a single structured console message per submit with counts of uploaded/cleared images/videos and whether imageOrder/transforms changed). All user-facing text must be in English.",
-      "reqIds": [
-        "REQ-18"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-in-app-media-manager-ux-so-mobile-users-can-add-replace-media-per-slot-without-relying-on-hover-including-per-image-slot-controls-for-upload-replace-adjust-clear-and-drag-to-reorder-images",
-      "title": "Update the in-app Media Manager UX so mobile users can add/replace media per slot without relying on hover, including per-image-slot controls for Upload/Replace, Adjust, Clear, and drag-to-reorder images.",
-      "reqIds": [
-        "REQ-19"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-hero-section-media-top-right-entry-point-clearly-provides-access-to-uploading-replacing-media-for-all-sections-hero-background-all-image-memory-slots-and-all-video-memory-slots",
-      "title": "Ensure the Hero section 'Media' (top/right) entry point clearly provides access to uploading/replacing media for all sections: Hero background, all Image Memory slots, and all Video Memory slots.",
-      "reqIds": [
-        "REQ-20"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-support-for-uploading-replacing-clearing-a-background-song-audio-file-from-the-phone-gallery-device-storage-inside-the-media-manager-and-persist-it-locally-so-it-survives-refreshes",
-      "title": "Add support for uploading/replacing/clearing a background song (audio file) from the phone gallery/device storage inside the Media Manager, and persist it locally so it survives refreshes.",
-      "reqIds": [
-        "REQ-21"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-a-simple-user-facing-way-to-control-whether-uploaded-videos-play-with-sound-voice-or-muted-in-the-video-memories-section-without-breaking-existing-uploads-and-fallbacks",
-      "title": "Add a simple user-facing way to control whether uploaded videos play with sound (voice) or muted in the Video Memories section, without breaking existing uploads and fallbacks.",
-      "reqIds": [
-        "REQ-22"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-mediastorecontext-object-url-lifecycle-so-uploaded-image-memory-images-do-not-get-revoked-during-normal-react-re-renders-updates-which-currently-causes-images-to-fail-loading-and-fall-back-to-the-pink-error-placeholder-object-urls-should-only-be-revoked-when-they-are-being-replaced-cleared-or-when-the-app-is-truly-unmounting",
-      "title": "Fix MediaStoreContext object-URL lifecycle so uploaded Image Memory images do not get revoked during normal React re-renders/updates (which currently causes images to fail loading and fall back to the pink error/placeholder). Object URLs should only be revoked when they are being replaced/cleared or when the app is truly unmounting.",
-      "reqIds": [
-        "REQ-23"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-in-the-image-memory-grid-ensure-that-tapping-clicking-a-card-reliably-reveals-the-configured-message-for-that-memory-the-existing-reveal-interaction-may-be-a-flip-or-another-in-place-reveal-and-that-the-message-reveal-does-not-appear-as-a-blank-pink-only-view",
-      "title": "In the Image Memory grid, ensure that tapping/clicking a card reliably reveals the configured message for that memory (the existing reveal interaction may be a flip or another in-place reveal), and that the message reveal does not appear as a blank/pink-only view.",
-      "reqIds": [
-        "REQ-24"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-identify-the-root-cause-of-the-production-publish-deployment-failure-and-implement-the-necessary-fixes-so-the-latest-draft-can-be-deployed-to-production-without-errors",
-      "title": "Identify the root cause of the production publish/deployment failure and implement the necessary fixes so the latest draft can be deployed to production without errors.",
-      "reqIds": [
-        "REQ-25"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-improve-deployment-failure-diagnostics-so-that-if-a-publish-deploy-fails-again-the-error-output-includes-the-actionable-underlying-cause-not-only-a-generic-deployment-error",
-      "title": "Improve deployment failure diagnostics so that if a publish/deploy fails again, the error output includes the actionable underlying cause (not only a generic \"Deployment error\").",
-      "reqIds": [
-        "REQ-26"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-a-pre-publish-verification-step-to-the-deploy-workflow-to-catch-common-publish-blockers-before-attempting-production-deployment-e-g-frontend-build-failing-missing-required-artifacts-misconfigured-canister-deploy-settings",
-      "title": "Add a pre-publish verification step to the deploy workflow to catch common publish blockers before attempting production deployment (e.g., frontend build failing, missing required artifacts, misconfigured canister/deploy settings).",
-      "reqIds": [
-        "REQ-27"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-the-media-manager-publish-submit-flow-so-that-after-the-user-clicks-submit-all-uploaded-replaced-images-and-videos-remain-visible-immediately-in-the-live-app-image-memory-section-and-video-memory-section-without-requiring-a-refresh-and-without-falling-back-to-pink-blank-placeholders",
-      "title": "Fix the Media Manager publish/submit flow so that after the user clicks Submit, all uploaded/replaced images and videos remain visible immediately in the live app (Image Memory section and Video Memory section) without requiring a refresh, and without falling back to pink/blank placeholders.",
-      "reqIds": [
-        "REQ-28"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-mediastorecontext-persistence-and-rehydration-are-correct-so-that-media-published-via-submit-is-still-visible-after-a-full-page-reload-using-the-existing-local-persistence-mechanism-and-that-the-app-does-not-accidentally-drop-media-due-to-key-index-mismatches-or-incomplete-rehydration",
-      "title": "Ensure MediaStoreContext persistence and rehydration are correct so that media published via Submit is still visible after a full page reload (using the existing local persistence mechanism), and that the app does not accidentally drop media due to key/index mismatches or incomplete rehydration.",
-      "reqIds": [
-        "REQ-29"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-lightweight-diagnostics-for-the-publish-action-to-make-it-easy-to-confirm-what-was-applied-when-the-user-clicks-submit-and-make-sure-any-user-facing-error-text-shown-in-the-ui-is-in-english",
-      "title": "Add lightweight diagnostics for the publish action to make it easy to confirm what was applied when the user clicks Submit, and make sure any user-facing error text shown in the UI is in English.",
-      "reqIds": [
-        "REQ-30"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-implement-production-safe-persistence-for-uploaded-media-hero-background-43-image-slots-6-video-slots-and-background-song-so-that-media-published-via-the-media-manager-is-available-in-the-published-production-app-not-only-in-the-draft-app",
-      "title": "Implement production-safe persistence for uploaded media (hero background, 43 image slots, 6 video slots, and background song) so that media published via the Media Manager is available in the published/production app, not only in the draft app.",
-      "reqIds": [
-        "REQ-31"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-frontend-publish-submit-flow-so-that-clicking-submit-uploads-the-staged-media-changes-uploads-and-clears-to-the-backend-as-the-source-of-truth-for-the-published-app-while-keeping-immediate-in-app-updates-after-submit",
-      "title": "Update the frontend publish/submit flow so that clicking Submit uploads the staged media changes (uploads and clears) to the backend as the source of truth for the published app, while keeping immediate in-app updates after Submit.",
-      "reqIds": [
-        "REQ-33"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-mediastorecontext-startup-rehydration-logic-so-the-app-loads-media-in-this-order-1-browser-local-persisted-media-indexeddb-for-fast-local-preview-if-present-then-2-backend-published-media-as-a-fallback-when-local-media-is-absent-typical-in-published-production-on-a-new-origin-otherwise-3-existing-static-placeholder-paths",
-      "title": "Update MediaStoreContext startup/rehydration logic so the app loads media in this order: (1) browser-local persisted media (IndexedDB) for fast local preview if present, then (2) backend-published media as a fallback when local media is absent (typical in published/production on a new origin), otherwise (3) existing static placeholder paths.",
-      "reqIds": [
-        "REQ-34"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-lightweight-english-diagnostics-for-production-media-loading-to-help-confirm-why-media-is-missing-e-g-log-one-structured-console-message-on-app-start-with-counts-of-locally-found-vs-backend-found-hero-images-videos-song",
-      "title": "Add lightweight, English diagnostics for production media loading to help confirm why media is missing (e.g., log one structured console message on app start with counts of locally-found vs backend-found hero/images/videos/song).",
-      "reqIds": [
-        "REQ-35"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-explicit-backend-apis-for-publishing-and-clearing-media-per-type-slot-hero-background-index-0-images-index-1-43-videos-index-1-6-background-song-index-0-and-wire-them-so-frontend-publishing-no-longer-calls-the-current-no-op-publishmedia-placeholder",
-      "title": "Add explicit backend APIs for publishing and clearing media per type/slot (hero background index 0, images index 1–43, videos index 1–6, background song index 0) and wire them so frontend publishing no longer calls the current no-op publishMedia() placeholder.",
-      "reqIds": [
-        "REQ-37"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-publishedmediaclient-fetchpublishedmedia-mapping-so-it-correctly-interprets-the-backend-publishedmedia-shape-including-tuple-fields-and-optional-slots-and-produces-stable-renderable-urls-for-hero-images-videos-and-song-in-published-preview-mode",
-      "title": "Fix publishedMediaClient.fetchPublishedMedia() mapping so it correctly interprets the backend PublishedMedia shape (including tuple fields and optional slots) and produces stable, renderable URLs for hero, images, videos, and song in published/preview mode.",
-      "reqIds": [
-        "REQ-38"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-mediastorecontext-startup-rehydration-in-published-preview-mode-correctly-falls-back-to-backend-published-media-when-local-indexeddb-media-is-absent-typical-on-a-new-origin-and-that-this-backend-fallback-applies-to-hero-background-all-image-slots-all-video-slots-and-the-background-song",
-      "title": "Ensure MediaStoreContext startup rehydration in published/preview mode correctly falls back to backend-published media when local IndexedDB media is absent (typical on a new origin), and that this backend fallback applies to hero background, all image slots, all video slots, and the background song.",
-      "reqIds": [
-        "REQ-39"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-media-manager-submit-publish-flow-to-guarantee-that-after-submit-completes-successfully-the-live-ui-immediately-reflects-the-submitted-media-hero-background-image-grid-in-the-chosen-order-with-transforms-video-grid-and-song-without-requiring-a-refresh-in-both-draft-and-published-preview-workflows",
-      "title": "Update the Media Manager Submit/publish flow to guarantee that after Submit completes successfully, the live UI immediately reflects the submitted media (hero background, image grid in the chosen order with transforms, video grid, and song) without requiring a refresh, in both draft and published preview workflows.",
-      "reqIds": [
-        "REQ-40"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-lightweight-production-focused-diagnostics-to-make-it-easy-to-verify-why-media-is-missing-in-published-preview-mode-including-one-structured-console-log-on-app-start-already-present-and-one-structured-console-log-per-submit-that-includes-counts-of-uploaded-cleared-items-and-whether-order-transforms-changed",
-      "title": "Add lightweight, production-focused diagnostics to make it easy to verify why media is missing in published/preview mode, including one structured console log on app start (already present) and one structured console log per Submit that includes counts of uploaded/cleared items and whether order/transforms changed.",
-      "reqIds": [
-        "REQ-41"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-uploaded-published-media-is-visible-in-both-the-app-s-preview-experience-and-the-live-production-experience-hero-background-all-image-memory-slots-all-video-memory-slots-and-the-background-song-must-render-using-the-current-mediastore-state-and-must-correctly-fall-back-to-backend-published-media-when-local-indexeddb-media-is-absent",
-      "title": "Ensure uploaded/published media is visible in both the app's preview experience and the live/production experience: Hero background, all Image Memory slots, all Video Memory slots, and the background song must render using the current MediaStore state and must correctly fall back to backend-published media when local IndexedDB media is absent.",
-      "reqIds": [
-        "REQ-42"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-an-explicit-user-friendly-pre-publish-preview-inside-the-media-manager-that-lets-the-user-confirm-what-they-uploaded-for-hero-images-videos-and-song-before-publishing-and-make-sure-the-preview-uses-the-staged-draft-values-not-only-the-currently-published-live-values",
-      "title": "Add an explicit, user-friendly pre-publish preview inside the Media Manager that lets the user confirm what they uploaded for Hero, Images, Videos, and Song before publishing, and make sure the preview uses the staged draft values (not only the currently published/live values).",
-      "reqIds": [
-        "REQ-43"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-background-audio-playback-so-the-user-can-reliably-hear-the-song-in-both-preview-and-live-production-modes-including-when-the-user-uploads-a-custom-song-ensure-playback-works-across-common-mobile-browsers-where-autoplay-may-be-blocked",
-      "title": "Fix background audio playback so the user can reliably hear the song in both preview and live/production modes, including when the user uploads a custom song; ensure playback works across common mobile browsers where autoplay may be blocked.",
-      "reqIds": [
-        "REQ-44"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-hero-section-media-entry-point-button-to-remove-the-confusing-edit-label-and-show-a-clear-consistent-label-in-english-on-all-screen-sizes-keep-the-icon",
-      "title": "Update the Hero section Media entry-point button to remove the confusing \"Edit\" label and show a clear, consistent label in English on all screen sizes (keep the icon).",
-      "reqIds": [
-        "REQ-45"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-clear-actions-are-easy-to-understand-and-reliably-remove-media-references-so-the-ui-falls-back-to-placeholders-hero-individual-image-slots-individual-video-slots-and-song-in-both-preview-and-live-views-after-submit",
-      "title": "Ensure 'clear' actions are easy to understand and reliably remove media references so the UI falls back to placeholders (Hero, individual image slots, individual video slots, and song) in both preview and live views after Submit.",
-      "reqIds": [
-        "REQ-46"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-the-frontend-to-backend-slot-index-mapping-when-publishing-and-clearing-images-and-videos-so-that-backend-storage-0-based-arrays-correctly-aligns-with-ui-slots-1-43-for-images-1-6-for-videos-and-published-media-becomes-visible-in-preview-mode",
-      "title": "Fix the frontend-to-backend slot index mapping when publishing and clearing Images and Videos so that backend storage (0-based arrays) correctly aligns with UI slots (1–43 for images, 1–6 for videos) and published media becomes visible in preview mode.",
-      "reqIds": [
-        "REQ-47"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-preview-mode-reliably-loads-backend-published-media-hero-all-image-slots-all-video-slots-and-song-on-a-fresh-origin-session-where-local-indexeddb-media-is-absent-and-that-the-ui-renders-the-backend-fetched-urls-without-requiring-a-manual-refresh",
-      "title": "Ensure preview mode reliably loads backend-published media (hero, all image slots, all video slots, and song) on a fresh origin/session where local IndexedDB media is absent, and that the UI renders the backend-fetched URLs without requiring a manual refresh.",
-      "reqIds": [
-        "REQ-48"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-if-backend-media-publish-fails-during-submit-e-g-due-to-index-mapping-or-authorization-show-a-clear-english-error-in-the-media-manager-error-panel-and-keep-the-dialog-open-so-the-user-can-retry-after-adjusting-changes",
-      "title": "If backend media publish fails during Submit (e.g., due to index mapping or authorization), show a clear English error in the Media Manager error panel and keep the dialog open so the user can retry after adjusting changes.",
-      "reqIds": [
-        "REQ-49"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-frontend-decoding-mapping-of-backend-getpublishedmedia-so-that-hero-background-image-slots-1-43-video-slots-1-6-and-background-song-urls-are-correctly-derived-from-the-motoko-publishedmedia-optional-tuple-shapes-and-reliably-render-in-preview-and-published-modes",
-      "title": "Fix frontend decoding/mapping of backend `getPublishedMedia()` so that Hero background, Image slots (1–43), Video slots (1–6), and Background song URLs are correctly derived from the Motoko `PublishedMedia` optional/tuple shapes and reliably render in Preview and Published modes.",
-      "reqIds": [
-        "REQ-50"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-make-backend-refresh-rehydration-in-mediastorecontext-resilient-so-that-a-failed-or-empty-backend-fetch-does-not-wipe-already-visible-local-media-in-the-editor-only-replace-local-media-with-backend-urls-when-backend-fetch-succeeds-and-provides-a-valid-value-for-that-slot-type",
-      "title": "Make backend refresh/rehydration in `MediaStoreContext` resilient so that a failed or empty backend fetch does not wipe already-visible local media in the editor; only replace local media with backend URLs when backend fetch succeeds and provides a valid value for that slot/type.",
-      "reqIds": [
-        "REQ-51"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-a-single-structured-diagnostic-console-log-on-backend-media-load-that-includes-counts-of-successfully-decoded-backend-hero-images-videos-song-after-fetchpublishedmedia-runs-to-make-it-easy-to-confirm-whether-preview-published-mode-is-pulling-media-from-the-backend",
-      "title": "Add a single, structured diagnostic console log on backend media load that includes counts of successfully decoded backend hero/images/videos/song after `fetchPublishedMedia()` runs, to make it easy to confirm whether Preview/Published mode is pulling media from the backend.",
-      "reqIds": [
-        "REQ-52"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-unify-media-source-of-truth-so-that-the-same-committed-media-set-hero-background-43-image-slots-6-video-slots-and-background-song-is-what-renders-in-draft-preview-and-published-modes-draft-preview-published-after-a-successful-media-manager-submit-the-app-must-render-from-the-committed-set-and-must-not-show-any-older-placeholders-or-regenerated-static-assets-for-those-slots",
-      "title": "Unify media source-of-truth so that the same committed media set (hero background, 43 image slots, 6 video slots, and background song) is what renders in Draft, Preview, and Published modes (Draft = Preview = Published). After a successful Media Manager Submit, the app must render from the committed set and must not show any older placeholders or regenerated/static assets for those slots.",
-      "reqIds": [
-        "REQ-53"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-a-strict-uploaded-only-rendering-rule-for-all-modes-for-hero-background-each-image-slot-each-video-slot-and-the-background-song-render-the-user-s-committed-uploaded-media-if-present-if-not-present-render-an-explicit-empty-state-no-placeholder-assets-no-default-packaged-media-no-regeneration-this-rule-must-apply-consistently-in-draft-preview-and-published",
-      "title": "Add a strict \"uploaded-only\" rendering rule for all modes: for hero background, each image slot, each video slot, and the background song, render the user’s committed uploaded media if present; if not present, render an explicit empty state (no placeholder assets, no default packaged media, no regeneration). This rule must apply consistently in Draft, Preview, and Published.",
-      "reqIds": [
-        "REQ-54"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-remove-disable-any-media-lazy-loading-or-visibility-gating-that-can-cause-committed-uploaded-media-to-appear-missing-e-g-loading-lazy-on-committed-images-deferred-video-source-assignment-that-never-triggers-conditional-rendering-that-hides-media-until-interaction-committed-uploaded-media-must-be-eagerly-attached-to-the-dom-and-begin-loading-immediately-on-initial-render-across-draft-preview-and-published",
-      "title": "Remove/disable any media lazy-loading or visibility gating that can cause committed uploaded media to appear missing (e.g., `loading=\"lazy\"` on committed images, deferred video source assignment that never triggers, conditional rendering that hides media until interaction). Committed uploaded media must be eagerly attached to the DOM and begin loading immediately on initial render across Draft, Preview, and Published.",
-      "reqIds": [
-        "REQ-55"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-make-backend-published-media-retrieval-and-frontend-decoding-rendering-deterministic-and-identical-across-preview-and-published-builds-the-frontend-must-always-interpret-the-motoko-getpublishedmedia-response-consistently-including-optionals-tuples-and-slot-indexing-producing-stable-renderable-urls-for-every-committed-slot-and-never-silently-dropping-media-due-to-decode-mapping-issues",
-      "title": "Make backend-published media retrieval and frontend decoding/rendering deterministic and identical across Preview and Published builds: the frontend must always interpret the Motoko `getPublishedMedia()` response consistently (including optionals/tuples and slot indexing), producing stable, renderable URLs for every committed slot and never silently dropping media due to decode/mapping issues.",
-      "reqIds": [
-        "REQ-56"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-one-structured-english-only-diagnostic-console-log-on-app-start-and-one-on-every-successful-submit-that-confirms-the-exact-committed-media-state-used-for-rendering-across-modes-counts-for-hero-images-videos-song-plus-image-order-transform-counts-this-diagnostics-output-must-be-identical-in-shape-across-draft-preview-and-published-to-aid-verification-that-draft-preview-published",
-      "title": "Add one structured, English-only diagnostic console log on app start and one on every successful Submit that confirms the exact committed media state used for rendering across modes (counts for hero/images/videos/song, plus image order + transform counts). This diagnostics output must be identical in shape across Draft, Preview, and Published to aid verification that Draft = Preview = Published.",
-      "reqIds": [
-        "REQ-57"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-frontend-media-manager-ui-to-support-an-images-only-mode-for-non-admin-image-uploaders-they-can-only-add-replace-clear-image-memory-slots-and-submit-those-changes-and-they-cannot-access-hero-video-song-editing-controls",
-      "title": "Update the frontend Media Manager UI to support an “Images-only” mode for non-admin image-uploaders: they can only add/replace/clear Image Memory slots and submit those changes, and they cannot access Hero/Video/Song editing controls.",
-      "reqIds": [
-        "REQ-60"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-submit-publish-flow-works-correctly-for-image-uploaders-non-admin-by-publishing-only-image-related-draft-changes-and-handling-backend-authorization-failures-with-clear-english-errors-without-closing-the-dialog",
-      "title": "Ensure the Submit/publish flow works correctly for image-uploaders (non-admin) by publishing only image-related draft changes and handling backend authorization failures with clear English errors (without closing the dialog).",
-      "reqIds": [
-        "REQ-61"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-frontend-media-manager-permissions-logic-so-that-the-images-tab-is-editable-for-all-visitors-anyone-while-hero-videos-song-remain-restricted-to-administrators-ensure-any-user-facing-permission-lock-text-is-in-english-and-matches-the-new-behavior",
-      "title": "Update frontend Media Manager permissions logic so that the Images tab is editable for all visitors (anyone), while Hero/Videos/Song remain restricted to administrators. Ensure any user-facing permission/lock text is in English and matches the new behavior.",
-      "reqIds": [
-        "REQ-63"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-media-manager-ui-copy-to-explicitly-tell-users-they-can-choose-images-from-their-phone-gallery-or-google-drive-via-the-device-file-picker-no-separate-google-drive-login",
-      "title": "Update Media Manager UI copy to explicitly tell users they can choose images from their phone gallery or Google Drive via the device file picker (no separate Google Drive login).",
-      "reqIds": [
-        "REQ-64"
       ],
       "version": 1
     }
@@ -605,118 +63,30 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Support custom background image for the Hero section (configurable/replacable).",
+      "summary": "Set provided image as the hero section background.",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Allow replacing/updating Image Memory section images with photos from the user’s phone gallery (upload/selection flow).",
+      "summary": "Background music player: autoplay silently on page load, loop continuously, uses a custom MP3, includes play/pause controls in the bottom-right, lightweight visible audio tag, mobile autoplay compatible, no user interaction required.",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "Allow adding/replacing videos in the Video Memory section with user-provided memorable videos (upload/selection flow).",
+      "summary": "Image Memory section: responsive grid of 43+ image cards (support unlimited images), add images before publishing, each card clickable/tappable with smooth 3D rotate + fade to reveal a romantic message on the back; soft shadow and rounded corners; working mode includes add/replace, drag-to-adjust, and save controls.",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-4",
-      "summary": "Add a 'Media Manager' mode to manage the 43-image grid and 6-video grid, enabling one-by-one upload/replace from the user’s phone gallery before publishing.",
+      "summary": "Video Memory section: grid of 6 videos with preserved aspect ratio; allow adding videos before publishing.",
       "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-5",
-      "summary": "Add a Submit button to the Media adding popup so changes are only applied/sorted after submitting.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-6",
-      "summary": "Enable dragging/adjusting images in the media manager (e.g., reorder and/or reposition/crop within a frame).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-7",
-      "summary": "Add support for managing video audio: allow videos with/without original voice and let user add/replace a song/background audio track after uploading (via Media Manager).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-9",
-      "summary": "Extend the Motoko backend (single actor) to store and serve published media blobs by type and slot index, including support for clearing slots and retrieving the current published set for app startup.",
-      "reqIds": [
-        "REQ-32"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-10",
-      "summary": "Implement real backend persistence for published media so that images, videos, hero background, and background song that are submitted in the Media Manager are stored in the Motoko canister (single actor) and returned by getPublishedMedia() in published/preview mode.",
-      "reqIds": [
-        "REQ-36"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-8",
-      "summary": "Improve media publish/preview UX: clearly show uploaded Hero/Image/Video previews before publishing, and remove/simplify the Media Manager “Edit” button/entry control for clarity.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-11",
-      "summary": "Ensure Draft/Preview/Published render identically using only the user’s uploaded media (hero/images/videos/song) with persistent binding across modes; disable placeholder fallbacks, regeneration/asset reset, lazy-loading, or any media hiding so the published experience matches Draft exactly.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-12",
-      "summary": "Add permissions/user access control so designated users (not only the owner) can upload and per-slot add/replace photos in the Image section (with background song upload coming soon).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-13",
-      "summary": "Add backend support for granting and revoking Image Upload access to specific user principals (allowlist), separate from admin permission.",
-      "reqIds": [
-        "REQ-58"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-14",
-      "summary": "Update backend media publishing authorization so that Image Memory slot publishing/clearing is allowed for principals on the image-uploader allowlist, while Hero background, Video Memory slots, and Background Song remain admin-only.",
-      "reqIds": [
-        "REQ-59"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-15",
-      "summary": "Change Image Memory upload permissions to allow anyone (public) to add/replace images via the Media Manager (remove allowlist/authorized-user restriction for images).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-16",
-      "summary": "Add Google Drive as an import source for uploading images into the Image Memory section (in addition to phone gallery/file picker).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-17",
-      "summary": "Update backend image publishing/clearing authorization so that ANY caller (including non-admin users) can publish and clear Image Memory slots (images index 0–42 / UI slots 1–43), without requiring the image-uploader allowlist. Keep Hero background, Video Memory slots, and Background Song admin-only.",
-      "reqIds": [
-        "REQ-62"
-      ],
       "status": "pending"
     }
   ],
-  "projectName": "Add phone-gallery uploads for hero background, image memories, and video memories",
+  "projectName": "Set uploaded hero background image and enforce autoplaying looping background music + memory grids behavior",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import LockScreen from './components/LockScreen';
 import IntroPopup from './components/IntroPopup';
+import ProposalPopup from './components/ProposalPopup';
 import HeroSection from './components/HeroSection';
 import ImageMemorySection from './components/ImageMemorySection';
 import VideoMemorySection from './components/VideoMemorySection';
@@ -9,7 +10,6 @@ import MusicPlayer from './components/MusicPlayer';
 import FloatingHearts from './components/FloatingHearts';
 import RosePetals from './components/RosePetals';
 import LoveLetterPopup from './components/LoveLetterPopup';
-import ProposalPopup from './components/ProposalPopup';
 import MediaManager from './components/MediaManager';
 import { useSessionGate } from './hooks/useSessionGate';
 import { MediaStoreProvider } from './context/MediaStoreContext';
@@ -17,9 +17,10 @@ import { MediaStoreProvider } from './context/MediaStoreContext';
 function App() {
   const { isUnlocked, attemptUnlock } = useSessionGate();
   const [showIntro, setShowIntro] = useState(false);
-  const [showLoveLetter, setShowLoveLetter] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  const [showLoveLetter, setShowLoveLetter] = useState(false);
   const [showMediaManager, setShowMediaManager] = useState(false);
+  const [showMainContent, setShowMainContent] = useState(false);
 
   useEffect(() => {
     if (isUnlocked) {
@@ -29,6 +30,14 @@ function App() {
 
   const handleIntroClose = () => {
     setShowIntro(false);
+    // Show proposal popup after intro
+    setShowProposal(true);
+  };
+
+  const handleProposalClose = () => {
+    setShowProposal(false);
+    // Show main content after proposal is closed
+    setShowMainContent(true);
   };
 
   if (!isUnlocked) {
@@ -45,8 +54,11 @@ function App() {
         {/* Intro popup */}
         <IntroPopup open={showIntro} onClose={handleIntroClose} />
 
-        {/* Main content - only shown after intro is dismissed */}
-        {!showIntro && (
+        {/* Proposal popup after intro */}
+        <ProposalPopup open={showProposal} onClose={handleProposalClose} />
+
+        {/* Main content - only shown after proposal is dismissed */}
+        {showMainContent && (
           <main className="relative z-10">
             <HeroSection onOpenMediaManager={() => setShowMediaManager(true)} />
             <ImageMemorySection />
@@ -78,7 +90,6 @@ function App() {
 
         {/* Popups */}
         <LoveLetterPopup open={showLoveLetter} onClose={() => setShowLoveLetter(false)} />
-        <ProposalPopup open={showProposal} onClose={() => setShowProposal(false)} />
         <MediaManager open={showMediaManager} onClose={() => setShowMediaManager(false)} />
       </div>
     </MediaStoreProvider>

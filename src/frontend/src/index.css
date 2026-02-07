@@ -108,6 +108,44 @@
     }
 }
 
+/* Login emoji animation - slow blinking and floating */
+@keyframes login-emoji-float {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-20px) scale(1.2);
+        opacity: 1;
+    }
+}
+
+.login-emoji {
+    position: absolute;
+    font-size: 2rem;
+    animation: login-emoji-float 5s ease-in-out infinite;
+    pointer-events: none;
+    top: 10%;
+}
+
+/* Ring emoji rotation animation */
+@keyframes ring-emoji-rotate {
+    0% {
+        transform: rotate(0deg) translateX(80px) rotate(0deg);
+        opacity: 0.8;
+    }
+    100% {
+        transform: rotate(360deg) translateX(80px) rotate(-360deg);
+        opacity: 1;
+    }
+}
+
+.ring-emoji {
+    position: absolute;
+    font-size: 2rem;
+    animation: ring-emoji-rotate 3s linear infinite;
+}
+
 .floating-heart {
     position: absolute;
     font-size: 1.5rem;
@@ -134,19 +172,23 @@
     display: inline-block;
 }
 
-/* 3D Flip Card Styles */
+/* 3D Flip Card Styles - Enhanced for smooth rotation and immediate message visibility */
 .flip-card-container {
-    perspective: 1000px;
+    perspective: 1200px;
     cursor: pointer;
     aspect-ratio: 3/4;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .flip-card {
     position: relative;
     width: 100%;
     height: 100%;
-    transition: transform 0.8s;
+    transition: transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
     transform-style: preserve-3d;
+    will-change: transform;
 }
 
 .flip-card.flipped {
@@ -159,13 +201,56 @@
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     border-radius: 1rem;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .flip-card-front {
     background: linear-gradient(135deg, #fecdd3 0%, #fda4af 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flip-card-image-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fecdd3;
+}
+
+.flip-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+}
+
+.flip-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.3) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+.flip-card-hint {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    color: white;
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    pointer-events: none;
 }
 
 .flip-card-back {
@@ -174,7 +259,65 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 1.5rem;
+}
+
+.flip-card-message-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flip-card-message {
+    text-align: center;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: white;
+    font-weight: 500;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.3s ease-in 0.2s, transform 0.3s ease-in 0.2s;
+}
+
+.flip-card-message.fade-in {
+    opacity: 1;
+    transform: scale(1);
+}
+
+@media (min-width: 768px) {
+    .flip-card-message {
+        font-size: 1rem;
+    }
+    
+    .flip-card-hint {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .flip-card {
+        transition: transform 0.3s ease;
+    }
+    
+    .flip-card-message {
+        transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+}
+
+/* Music Player Audio Element - Lightly Visible */
+.music-player-audio {
+    width: 200px;
+    height: 32px;
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+.music-player-audio:hover {
+    opacity: 0.6;
 }
 
 /* Smooth transitions */

@@ -6,17 +6,13 @@ import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-import Migration "migration";
 
-// Migrate persistent data when redeploying the canister through `dfx deploy`
-(with migration = Migration.run)
+
+
 actor {
   // Authorization
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
-
-  // Image Uploader Allowlist (persisted)
-  var imageUploaderAllowlist : [Principal] = [];
 
   // User Management
   public type UserProfile = {
@@ -93,31 +89,6 @@ actor {
   let publishedVersions = Map.empty<Text, VersionInfo>();
   var currentVersion : ?VersionInfo = null;
 
-  // Image Uploader Access Control
-  public query ({ caller }) func getImageUploaderAllowlist() : async [Principal] {
-    imageUploaderAllowlist;
-  };
-
-  public shared ({ caller }) func grantImageUploaderAccess(user : Principal) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can manage access");
-    };
-    if (not imageUploaderAllowlist.any(func(p) { p == user })) {
-      imageUploaderAllowlist := imageUploaderAllowlist.concat([user]);
-    };
-  };
-
-  public shared ({ caller }) func revokeImageUploaderAccess(user : Principal) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can manage access");
-    };
-    imageUploaderAllowlist := imageUploaderAllowlist.filter(func(p) { p != user });
-  };
-
-  public query ({ caller }) func hasImageUploaderAccess(user : Principal) : async Bool {
-    imageUploaderAllowlist.any(func(p) { p == user });
-  };
-
   // User Management APIs
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
@@ -145,16 +116,19 @@ actor {
     publishedMedia;
   };
 
-  // Hero background (admin only)
+  // Hero background
   public shared ({ caller }) func setHeroBackground(blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish hero background");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can publish hero background");
     };
     publishedMedia := { publishedMedia with heroBackground = ?blob };
   };
 
-  // Images (now public, removed allowlist check)
+  // Images
   public shared ({ caller }) func setImage(index : Nat, name : Text, blob : Storage.ExternalBlob) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can publish images");
+    };
     if (index >= 43) {
       Runtime.trap("Invalid image index");
     };
@@ -171,10 +145,10 @@ actor {
     publishedMedia := { publishedMedia with images = updatedImages };
   };
 
-  // Video (admin only)
+  // Videos
   public shared ({ caller }) func setVideo(index : Nat, name : Text, blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish videos");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can publish videos");
     };
     if (index >= 6) {
       Runtime.trap("Invalid video index");
@@ -192,24 +166,26 @@ actor {
     publishedMedia := { publishedMedia with videos = updatedVideos };
   };
 
-  // Background song (admin only)
+  // Background song
   public shared ({ caller }) func setBackgroundSong(blob : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can publish background song");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can publish background song");
     };
     publishedMedia := { publishedMedia with backgroundSong = ?blob };
   };
 
   // Media clearing APIs (same permissions as publishing)
   public shared ({ caller }) func clearHeroBackground() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear hero background");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can clear hero background");
     };
     publishedMedia := { publishedMedia with heroBackground = null };
   };
 
-  // Images (now public, removed allowlist check)
   public shared ({ caller }) func clearImage(index : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can clear images");
+    };
     if (index >= 43) {
       Runtime.trap("Invalid image index");
     };
@@ -223,8 +199,8 @@ actor {
   };
 
   public shared ({ caller }) func clearVideo(index : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear videos");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can clear videos");
     };
     if (index >= 6) {
       Runtime.trap("Invalid video index");
@@ -239,8 +215,8 @@ actor {
   };
 
   public shared ({ caller }) func clearBackgroundSong() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can clear background song");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can clear background song");
     };
     publishedMedia := { publishedMedia with backgroundSong = null };
   };
